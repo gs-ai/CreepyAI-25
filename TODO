@@ -1,0 +1,31 @@
+The main features of the current program are:
+
+* Geolocation OSINT tool that gathers geolocation-related information from online sources.
+* Allows for presentation of gathered information on a map.
+* Provides search filtering based on exact location and/or date.
+* Supports export of data in CSV format or KML for further analysis in Google Maps.
+* Includes a graphical user interface built with PyQt5.
+* Supports multiple plugins for different online sources, such as Flickr, Instagram, and Twitter.
+* Provides a configuration wizard for some plugins to help with authentication and setup.
+* Allows for the creation and management of projects, including person-based projects.
+* Supports filtering of locations by date and position.
+* Provides options to show a heatmap of locations.
+* Includes functionality to check for updates and report problems.
+* Supports logging and capturing of stdout and stderr to log files. 
+
+The main files and directories related to these features are:
+* `creepy/CreepyMain.py` - Main application file.
+* `creepy/models/InputPlugin.py` - Base class for input plugins.
+* `creepy/models/Location.py` - Location model.
+* `creepy/models/LocationsList.py` - Locations table model.
+* `creepy/models/PluginConfigurationListModel.py` - Plugin configuration list model.
+* `creepy/models/Project.py` - Project model.
+* `creepy/models/ProjectTree.py` - Project tree model.
+* `creepy/models/ProjectWizardPluginListModel.py` - Project wizard plugin list model.
+* `creepy/models/ProjectWizardPossibleTargetsTable.py` - Project wizard possible targets table model.
+* `creepy/models/ProjectWizardSelectedTargetsTable.py` - Project wizard selected targets table model.
+* `creepy/plugins/flickr/flickr.py` - Flickr plugin.
+* `creepy/plugins/instagram/instagram.py` - Instagram plugin.
+* `creepy/plugins/twitter/twitter.py` - Twitter plugin.
+* `creepy/ui/CreepyUI.py` - Main UI file.
+* `creepy/utilities/GeneralUtilities.py` - General utilities.
