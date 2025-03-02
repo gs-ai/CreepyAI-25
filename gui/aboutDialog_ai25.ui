@@ -14,7 +14,7 @@
    <cursorShape>ArrowCursor</cursorShape>
   </property>
   <property name="windowTitle">
-   <string>About</string>
+   <string>About CreepyAI25</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../creepy/include/creepy_resources.qrc">
@@ -52,7 +52,7 @@
     <item>
      <widget class="QLabel" name="label">
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;img src=&quot;:/cr/creepy32.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;Creepy is a geolocation OSINT tool. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Version : &lt;/span&gt;1.0 - Codename &amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;Diskbråck&lt;/span&gt;&amp;quot;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Author&lt;/span&gt; : Ioannis Kakavas &amp;lt; jkakavas@gmail.com &amp;gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Website&lt;/span&gt;: www.geocreepy.net&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;img src=&quot;:/cr/creepy32.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;CreepyAI25 is an advanced geolocation OSINT AI tool. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Version : &lt;/span&gt;2.5 - Codename &amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;IntelliTrack&lt;/span&gt;&amp;quot;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Author&lt;/span&gt; : CreepyAI Team &amp;lt; support@creepyai.net &amp;gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Website&lt;/span&gt;: www.creepyai.net&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="textFormat">
        <enum>Qt::RichText</enum>

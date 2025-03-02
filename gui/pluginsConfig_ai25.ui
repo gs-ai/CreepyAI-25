@@ -29,7 +29,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Plugins Configuration</string>
+   <string>CreepyAI25 Plugins Configuration</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../creepy/include/creepy_resources.qrc">
