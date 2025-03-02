@@ -1,0 +1,43 @@
+# Core dependencies compatible with Python 3.11
+# Modified to avoid compatibility issues
+
+# Core dependencies
+yapsy==1.12.2
+configobj==5.0.9
+requests==2.32.2
+beautifulsoup4==4.11.1
+numpy==1.23.3
+scikit-learn==1.3.2  # Python 3.11 compatible version
+python-dateutil==2.8.2
+Pillow==10.3.0
+
+# Web scraping and API tools
+lxml==4.9.1
+html5lib==1.1
+pyquery==1.4.3
+fake-useragent==1.1.3  # Updated version
+
+# Geolocation specific libraries
+geopy==2.2.0
+folium==0.12.1
+gpxpy==1.5.0
+
+# Data processing
+pandas==2.0.3  # Compatible with Python 3.11
+matplotlib==3.7.3  # Compatible with Python 3.11
+seaborn==0.12.0
+
+# GUI dependencies - these should be installed with conda
+# conda install -c conda-forge pyqt=5.15
+# conda install -c conda-forge pyqtwebkit
+
+# Development tools
+pytest==7.4.3
+black==23.11.0
+flake8==6.1.0
+mypy==1.5.1
+isort==5.12.0
+
+# Documentation
+sphinx==7.2.6
+sphinx-rtd-theme==1.3.0
