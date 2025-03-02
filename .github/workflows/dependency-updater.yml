@@ -1,0 +1,32 @@
+name: Auto Dependency Update
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Runs every Monday at 3 AM UTC
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Upgrade Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --upgrade -r requirements.txt
+
+      - name: Commit & Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add requirements.txt
+          git commit -m "Auto-updated dependencies [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "No changes to push"
+

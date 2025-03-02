@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    assignees:
+      - "gs-ai"  # Replace with your actual GitHub username
+    labels:
+      - "dependencies"
+    allow:
+      - dependency-name: "configobj"
+    versioning-strategy: increase
+
