@@ -1,0 +1,73 @@
+CreepyAI/
+├── CreepyAI-25/
+│   └── creepy/
+│       ├── components/
+│       │   ├── AboutDialog.py
+│       │   ├── FilterLocationsDateDialog.py
+│       │   ├── FilterLocationsPointDialog.py
+│       │   ├── PersonProjectWizard.py
+│       │   ├── PluginsConfigurationDialog.py
+│       │   ├── UpdateCheckDialog.py
+│       │   ├── VerifyDeleteDialog.py
+│       │   └── __init__.py
+│       ├── CreepyMain.py
+│       ├── include/
+│       │   ├── export_template.html
+│       │   ├── map.html
+│       │   ├── mapSetPoint.html
+│       │   └── style.qss
+│       ├── logs/
+│       ├── models/
+│       │   ├── InputPlugin.py
+│       │   ├── Location.py
+│       │   ├── LocationsList.py
+│       │   ├── PluginConfigurationListModel.py
+│       │   ├── Project.py
+│       │   ├── ProjectTree.py
+│       │   ├── ProjectWizardPluginListModel.py
+│       │   ├── ProjectWizardPossibleTargetsTable.py
+│       │   ├── ProjectWizardSelectedTargetsTable.py
+│       │   └── __init__.py
+│       ├── plugins/
+│       │   ├── local_files/
+│       │   │   ├── local_files.conf
+│       │   │   ├── local_files.py
+│       │   │   └── local_files.yapsy-plugin
+│       │   ├── mock_social/
+│       │   │   ├── mock_social.conf
+│       │   │   ├── mock_social.py
+│       │   │   └── mock_social.yapsy-plugin
+│       │   └── plugin_template/
+│       │       ├── plugin_template.conf
+│       │       ├── plugin_template.py
+│       │       └── plugin_template.yapsy-plugin
+│       ├── projects/
+│       ├── temp/
+│       ├── ui/
+│       │   ├── AboutDialogUI.py
+│       │   ├── CreepyUI.py
+│       │   ├── FilterLocationsDateDialogUI.py
+│       │   ├── FilterLocationsPointDialogUI.py
+│       │   ├── PersonProjectWizardUI.py
+│       │   ├── PluginsConfigurationDialogUI.py
+│       │   ├── UpdateCheckDialogUI.py
+│       │   ├── VerifyDeleteDialogUI.py
+│       │   ├── ui_template.py
+│       │   └── __init__.py
+│       └── utilities/
+│           ├── ExportUtils.py
+│           ├── GeneralUtilities.py
+│           ├── PluginManager.py
+│           └── __init__.py
+├── environment.yml
+├── install_dependencies.sh
+├── launch_creepyai.py
+├── migration_guide.md
+├── plugin_development_guide.md
+├── project_structure.md
+├── pyqt5_migration_helper.py
+├── README.md
+├── requirements.txt
+├── structure.txt
+├── test_environment.py
+└── update_exports.py
