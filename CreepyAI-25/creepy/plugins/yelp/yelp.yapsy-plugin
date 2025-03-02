@@ -1,0 +1,9 @@
+[Core]
+Name = Yelp Plugin
+Module = yelp
+
+[Documentation]
+Author = Your Name
+Version = 0.1
+Website = https://www.geocreepy.net
+Description = Retrieves geo-locations from Yelp business listings with enhanced error handling and logging.
