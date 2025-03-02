@@ -1,15 +1,33 @@
 version: 2
+
+registries:
+  example:
+    type: npm-registry
+    url: https://example.com
+    token: ${{secrets.NPM_TOKEN}}
+
 updates:
-  - package-ecosystem: "pip"
-    directory: "/"
+  # NPM Dependencies
+  - package-ecosystem: "npm"
+    directory: "/src/npm-project"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 10
-    assignees:
-      - "gs-ai"  # Replace with your actual GitHub username
-    labels:
-      - "dependencies"
-    allow:
-      - dependency-name: "configobj"
-    versioning-strategy: increase
+    # Ignore all updates for Lodash
+    ignore:
+      - dependency-name: "lodash"
+    # Disable version updates (only allow security updates)
+    versioning-strategy: increase-if-necessary
+    registries:
+      - example
+
+  # Go Dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"  # Ensure you specify the correct directory for Go modules
+    schedule:
+      interval: "weekly"
+    groups:
+      golang:
+        applies-to: security-updates
+        patterns:
+          - "golang.org*"
 
