@@ -1,0 +1,69 @@
+=== IDENTICAL FILES ===
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy_resources_rc.py
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/creepy_resources_rc.py
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/CHANGELOG.md
+/Users/mbaosint/Desktop/Projects/CreepyAI/docs/CHANGELOG.md
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy.txt
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/creepy.txt
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/install_dependencies.sh
+/Users/mbaosint/Desktop/Projects/CreepyAI/scripts/install_dependencies.sh
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/git_manager.py
+/Users/mbaosint/Desktop/Projects/CreepyAI/src/utils/git_manager.py
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/update_github_repo.sh
+/Users/mbaosint/Desktop/Projects/CreepyAI/scripts/update_github_repo.sh
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/CreepyMain.py
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/CreepyMain.py
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepyai_gui.py
+/Users/mbaosint/Desktop/Projects/CreepyAI/src/gui/creepyai_gui.py
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/SECURITY.md
+/Users/mbaosint/Desktop/Projects/CreepyAI/docs/SECURITY.md
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/google_maps/google_maps.labels
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/foursquare/foursquare.labels
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/linkedin/linkedin.labels
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/pinterest/pinterest.conf
+/Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/snapchat/snapchat.conf
+
+/Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/heads/cleanup-branch
+/Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/heads/main
+/Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/remotes/origin/cleanup-branch
+
+
+=== FILE DIFFERENCES ANALYSIS ===
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/creepy_resources_rc.py and /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/creepy_resources_rc.py: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/CHANGELOG.md and /Users/mbaosint/Desktop/Projects/CreepyAI/docs/CHANGELOG.md: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/creepy.txt and /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/creepy.txt: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/install_dependencies.sh and /Users/mbaosint/Desktop/Projects/CreepyAI/scripts/install_dependencies.sh: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/git_manager.py and /Users/mbaosint/Desktop/Projects/CreepyAI/src/utils/git_manager.py: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/update_github_repo.sh and /Users/mbaosint/Desktop/Projects/CreepyAI/scripts/update_github_repo.sh: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/CreepyMain.py and /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/CreepyMain.py: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/creepyai_gui.py and /Users/mbaosint/Desktop/Projects/CreepyAI/src/gui/creepyai_gui.py: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/SECURITY.md and /Users/mbaosint/Desktop/Projects/CreepyAI/docs/SECURITY.md: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/google_maps/google_maps.labels and /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/foursquare/foursquare.labels: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/google_maps/google_maps.labels and /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/linkedin/linkedin.labels: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/pinterest/pinterest.conf and /Users/mbaosint/Desktop/Projects/CreepyAI/creepy/plugins/snapchat/snapchat.conf: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/heads/cleanup-branch and /Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/heads/main: '_io.TextIOWrapper' object is not subscriptable
+
+Error comparing /Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/heads/cleanup-branch and /Users/mbaosint/Desktop/Projects/CreepyAI/.git/refs/remotes/origin/cleanup-branch: '_io.TextIOWrapper' object is not subscriptable
+

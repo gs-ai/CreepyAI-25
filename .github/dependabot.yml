@@ -1,0 +1,33 @@
+version: 2
+
+registries:
+  example:
+    type: npm-registry
+    url: https://example.com
+    token: ${{secrets.NPM_TOKEN}}
+
+updates:
+  # NPM Dependencies
+  - package-ecosystem: "npm"
+    directory: "/src/npm-project"
+    schedule:
+      interval: "daily"
+    # Ignore all updates for Lodash
+    ignore:
+      - dependency-name: "lodash"
+    # Disable version updates (only allow security updates)
+    versioning-strategy: increase-if-necessary
+    registries:
+      - example
+
+  # Go Dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"  # Ensure you specify the correct directory for Go modules
+    schedule:
+      interval: "weekly"
+    groups:
+      golang:
+        applies-to: security-updates
+        patterns:
+          - "golang.org*"
+

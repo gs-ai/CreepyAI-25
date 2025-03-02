@@ -1,0 +1,10 @@
+[Core]
+Name = Twitter/X Plugin
+Module = twitter
+
+[Documentation]
+Author = CreepyAI Team
+Version = 1.0
+Website = https://creepyai.example.com
+Description = Extract location data from Twitter/X posts with support for geocoded tweets, place mentions, and coordinates extraction from text
+

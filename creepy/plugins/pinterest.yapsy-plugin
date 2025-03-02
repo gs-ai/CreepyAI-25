@@ -1,0 +1,9 @@
+[Core]
+Name = Pinterest Plugin
+Module = pinterest
+
+[Documentation]
+Author = CreepyAI Team
+Version = 1.0
+Website = https://creepyai.example.com
+Description = Extract location data from Pinterest pins and boards with support for metadata extraction and caching
