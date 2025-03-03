@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 CreepyAI Compatibility Checker
 ------------------------------
@@ -6,11 +7,17 @@ This script checks the compatibility of dependencies with the current Python ver
 and suggests compatible versions.
 """
 
+import os
 import sys
+import platform
+import logging
 import subprocess
 import re
 import pkg_resources
 from packaging.version import parse
+import importlib
+
+logger = logging.getLogger('CreepyAI.Compatibility')
 
 def get_python_version():
     """Get the current Python version"""
@@ -135,11 +142,241 @@ def check_requirements_file(file_path):
     else:
         print("All requirements are compatible. No changes needed.")
 
-if __name__ == "__main__":
-    import os
-    requirements_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
+def check_system_compatibility():
+    """
+    Check if the system is compatible with CreepyAI requirements
     
-    if os.path.exists(requirements_file):
-        check_requirements_file(requirements_file)
+    Returns:
+        bool: True if system is compatible, False otherwise
+    """
+    logger.info("Checking system compatibility...")
+    
+    # Check Python version
+    python_version = sys.version_info
+    if (python_version.major < 3 or (python_version.major == 3 and python_version.minor < 6)):
+        logger.error(f"Incompatible Python version: {platform.python_version()}")
+        logger.error("CreepyAI requires Python 3.6 or higher")
+        return False
+    
+    # Check required packages
+    required_packages = [
+        'PyQt5', 'yapsy', 'configobj', 'folium', 'geopy', 'requests',
+        'pillow', 'matplotlib', 'pandas', 'numpy'
+    ]
+    
+    # Optional packages that enhance functionality but aren't required
+    optional_packages = [
+        'simplekml',   # For KML export
+        'packaging',   # For version parsing
+        'openpyxl',    # For Excel export
+    ]
+    
+    missing_packages = []
+    for package in required_packages:
+        try:
+            importlib.import_module(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    missing_optional = []
+    for package in optional_packages:
+        try:
+            importlib.import_module(package)
+        except ImportError:
+            missing_optional.append(package)
+    
+    if missing_packages:
+        logger.error(f"Missing required packages: {', '.join(missing_packages)}")
+        logger.error("Please install missing packages using: pip install -r requirements.txt")
+        return False
+    
+    if missing_optional:
+        logger.warning(f"Missing optional packages: {', '.join(missing_optional)}")
+        logger.warning("Some features may be limited. Install these packages for full functionality.")
+    
+    # Check for plugins directory
+    plugins_dir = os.path.join(os.getcwd(), 'plugins')
+    if not os.path.exists(plugins_dir) or not os.path.isdir(plugins_dir):
+        logger.error(f"Plugins directory not found at: {plugins_dir}")
+        return False
+    
+    # Check for essential files
+    essential_files = [
+        os.path.join('creepy', 'include', 'creepy_resources.qrc'),
+        os.path.join('creepy', 'include', 'map.html'),
+        os.path.join('creepy', 'include', 'style.qss'),
+    ]
+    
+    for file_path in essential_files:
+        full_path = os.path.join(os.getcwd(), file_path)
+        if not os.path.exists(full_path):
+            logger.error(f"Essential file not found: {full_path}")
+            return False
+    
+    logger.info("System compatibility check passed")
+    return True
+
+def get_incompatibility_details():
+    """
+    Get detailed information about incompatibilities
+    
+    Returns:
+        list: List of incompatibility details
+    """
+    incompatibilities = []
+    
+    # Python version
+    python_version = sys.version_info
+    if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 6):
+        incompatibilities.append({
+            'type': 'Python Version',
+            'issue': f"Incompatible Python version: {platform.python_version()}",
+            'resolution': 'Install Python 3.6 or higher',
+            'critical': True
+        })
+    
+    # Check packages
+    required_packages = [
+        'PyQt5', 'yapsy', 'configobj', 'folium', 'geopy', 'requests',
+        'pillow', 'matplotlib', 'pandas', 'numpy'
+    ]
+    
+    optional_packages = [
+        'simplekml',   # For KML export
+        'packaging',   # For version parsing
+        'openpyxl',    # For Excel export
+    ]
+    
+    for package in required_packages:
+        try:
+            importlib.import_module(package)
+        except ImportError:
+            incompatibilities.append({
+                'type': 'Missing Package',
+                'issue': f"Package '{package}' is not installed",
+                'resolution': f"Install using: pip install {package}",
+                'critical': True
+            })
+    
+    for package in optional_packages:
+        try:
+            importlib.import_module(package)
+        except ImportError:
+            incompatibilities.append({
+                'type': 'Missing Optional Package',
+                'issue': f"Optional package '{package}' is not installed",
+                'resolution': f"Install using: pip install {package}",
+                'critical': False
+            })
+    
+    # Check plugins directory
+    plugins_dir = os.path.join(os.getcwd(), 'plugins')
+    if not os.path.exists(plugins_dir):
+        incompatibilities.append({
+            'type': 'Missing Directory',
+            'issue': f"Plugins directory not found at: {plugins_dir}",
+            'resolution': 'Create plugins directory and install plugins',
+            'critical': True
+        })
+    
+    return incompatibilities
+
+def check_compatibility():
+    """
+    Check system compatibility for running CreepyAI.
+    
+    Returns:
+        bool: True if system is compatible, False otherwise
+    """
+    compatibility_issues = []
+    
+    # Check Python version
+    python_version = sys.version_info
+    if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 7):
+        compatibility_issues.append(f"Python version {python_version.major}.{python_version.minor} is not supported. Minimum required is 3.7")
+    
+    # Check for required modules
+    required_modules = [
+        "PyQt5",
+        "PyQt5.QtWebEngineWidgets",
+        "requests",
+        "bs4",
+        "yapsy"
+    ]
+    
+    for module in required_modules:
+        if not importlib.util.find_spec(module):
+            compatibility_issues.append(f"Required module '{module}' is not installed")
+    
+    # Platform-specific checks
+    system = platform.system()
+    if system == "Windows":
+        # Check Windows-specific requirements
+        pass
+    elif system == "Linux":
+        # Check Linux-specific requirements
+        pass
+    elif system == "Darwin":
+        # Check macOS-specific requirements
+        pass
     else:
-        print("requirements.txt file not found!")
+        compatibility_issues.append(f"Unsupported operating system: {system}")
+    
+    # Log compatibility issues
+    if compatibility_issues:
+        for issue in compatibility_issues:
+            logger.warning(f"Compatibility issue: {issue}")
+        return False
+    
+    logger.info("System compatibility check passed")
+    return True
+
+def get_compatibility_status():
+    """
+    Get detailed compatibility status.
+    
+    Returns:
+        dict: Compatibility status information
+    """
+    status = {
+        "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        "platform": platform.system(),
+        "platform_version": platform.version(),
+        "modules": {}
+    }
+    
+    # Check modules
+    modules_to_check = [
+        "PyQt5", "PyQt5.QtWebEngineWidgets", "requests", "bs4", 
+        "yapsy", "folium", "PIL", "simplekml"
+    ]
+    
+    for module in modules_to_check:
+        try:
+            imported_module = importlib.import_module(module)
+            version = getattr(imported_module, "__version__", "Unknown")
+            status["modules"][module] = {
+                "installed": True,
+                "version": version
+            }
+        except ImportError:
+            status["modules"][module] = {
+                "installed": False,
+                "version": None
+            }
+    
+    return status
+
+if __name__ == "__main__":
+    # Configure logging when run directly
+    logging.basicConfig(level=logging.INFO)
+    
+    # Run compatibility check
+    is_compatible = check_system_compatibility()
+    
+    if not is_compatible:
+        print("System compatibility check failed. See above for details.")
+        sys.exit(1)
+    else:
+        print("System is compatible with CreepyAI.")
+        sys.exit(0)

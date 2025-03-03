@@ -3,27 +3,32 @@
 from creepy.models.InputPlugin import InputPlugin
 import os
 from PyQt5.QtWidgets import QLabel, QLineEdit, QWizard, QWizardPage, QVBoxLayout, QTextEdit, QMessageBox
-from foursquare import Foursquare
 import logging
 import urllib.request
 from urllib.parse import urlparse, parse_qs
 from configobj import ConfigObj
 import traceback
 
-# Set up logging
+# Set up logging without file handler (we'll use the main app's logger)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler(os.path.join(os.getcwd(), 'creepy_main.log'))
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
+
+# Make foursquare import conditional
+try:
+    from foursquare import Foursquare
+    FOURSQUARE_AVAILABLE = True
+except ImportError:
+    logger.warning("Foursquare module not available. Please install using 'pip install foursquare'")
+    FOURSQUARE_AVAILABLE = False
 
 class FoursquarePlugin(InputPlugin):
     name = "foursquare"
     hasWizard = True
 
     def __init__(self):
+        InputPlugin.__init__(self)
+        self.configured = False
+        
         labels_filename = self.name + ".labels"
         labels_file = os.path.join(os.getcwd(), 'plugins', self.name, labels_filename)
         labels_config = ConfigObj(infile=labels_file)
@@ -35,10 +40,22 @@ class FoursquarePlugin(InputPlugin):
             self.labels = None
             logger.error(f"Could not load the labels file for the {self.name} plugin.")
             logger.debug(traceback.format_exc())
-        self.config, self.options_string = self.readConfiguration("string_options")
-        self.api = self.getAuthenticatedAPI()
+            
+        # Only attempt to load config and authenticate if the module is available
+        if FOURSQUARE_AVAILABLE:
+            try:
+                self.config, self.options_string = self.readConfiguration("string_options")
+                self.api = self.getAuthenticatedAPI()
+            except Exception as err:
+                logger.error("Error initializing Foursquare plugin")
+                logger.debug(traceback.format_exc())
+                self.api = None
+        else:
+            self.api = None
 
     def getAuthenticatedAPI(self):
+        if not FOURSQUARE_AVAILABLE:
+            return None
         try:
             return Foursquare(access_token=self.options_string['hidden_access_token'])
         except Exception as err:
@@ -47,6 +64,8 @@ class FoursquarePlugin(InputPlugin):
             return None
 
     def isConfigured(self):
+        if not FOURSQUARE_AVAILABLE:
+            return (False, "Foursquare module not installed. Please install using 'pip install foursquare'")
         if not self.api:
             self.api = self.getAuthenticatedAPI()
         try:
@@ -58,6 +77,9 @@ class FoursquarePlugin(InputPlugin):
             return (False, str(err))
 
     def searchForTargets(self, search_term):
+        if not FOURSQUARE_AVAILABLE:
+            logger.error("Foursquare module not available. Cannot search for targets.")
+            return []
         logger.debug(f"Attempting to search for targets. Search term was: {search_term}")
         possibleTargets = []
         try:
@@ -84,6 +106,9 @@ class FoursquarePlugin(InputPlugin):
         return possibleTargets
 
     def getAllCheckins(self, uid, count, max_id, checkins):
+        if not FOURSQUARE_AVAILABLE:
+            logger.error("Foursquare module not available. Cannot retrieve check-ins.")
+            return []
         logger.debug(f"Attempting to retrieve all check-ins for user {uid}")
         if not self.api:
             self.api = self.getAuthenticatedAPI()
@@ -106,6 +131,9 @@ class FoursquarePlugin(InputPlugin):
             return checkins
 
     def returnLocations(self, target, search_params):
+        if not FOURSQUARE_AVAILABLE:
+            logger.error("Foursquare module not available. Cannot retrieve locations.")
+            return []
         logger.debug(f"Attempting to retrieve all check-ins for user {target['targetUserid']}")
         locations_list = []
         try:
@@ -131,6 +159,9 @@ class FoursquarePlugin(InputPlugin):
         return locations_list
 
     def runConfigWizard(self):
+        if not FOURSQUARE_AVAILABLE:
+            logger.error("Foursquare module not available. Cannot run configuration wizard.")
+            return
         try:
             api = Foursquare(client_id=self.options_string['hidden_client_id'], client_secret=self.options_string['hidden_client_secret'], redirect_uri=self.options_string['redirect_uri'])
             url = api.oauth.auth_url()
@@ -139,7 +170,7 @@ class FoursquarePlugin(InputPlugin):
             layout1 = QVBoxLayout()
             txtArea = QTextEdit()
             txtArea.setReadOnly(True)
-            txtArea.setText(f"Please copy the following link to your browser window. \n\n{url}\n\nOnce you authenticate with Foursquare you will be redirected to a link that looks like \n
+            txtArea.setText(f"Please copy the following link to your browser window. \n\n{url}\n\nOnce you authenticate with Foursquare you will be redirected to a link that looks like \ncreepyai://callback. Copy the FULL URL and paste it below.")
         except Exception as err:
             logger.error("Error running configuration wizard for Foursquare plugin.")
             logger.debug(traceback.format_exc())

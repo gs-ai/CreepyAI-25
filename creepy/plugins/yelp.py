@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from models.InputPlugin import InputPlugin
+from creepy.models.InputPlugin import InputPlugin
 import os
 import datetime
 import json
@@ -548,6 +548,41 @@ class YelpPlugin(InputPlugin):
         
         # Prepare search parameters
         params = {
-            'user_id': user_id,
-            'keyword': keyword,
-            'location':
+            'term': term,
+            'location': location,
+            'limit': limit,
+            'sort_by': 'best_match'
+        }
+        
+        # Start data fetch thread
+        self.data_fetch_thread = YelpDataFetchThread(self.api, params)
+        self.data_fetch_thread.progress_signal.connect(self._on_progress)
+        self.data_fetch_thread.complete_signal.connect(self._on_complete)
+        self.data_fetch_thread.error_signal.connect(self._on_error)
+        self.data_fetch_thread.start()
+        
+        return []
+    
+    def _on_progress(self, progress, message):
+        """Handle progress updates from the data fetch thread"""
+        logger.info(f"Progress: {progress}% - {message}")
+        
+    def _on_complete(self, locations):
+        """Handle completion of the data fetch thread"""
+        logger.info(f"Data fetch complete. Found {len(locations)} locations.")
+        
+        # Save locations to cache
+        cache_file = os.path.join(self._cache_path, f"{self.cache_key}_locations.json")
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(locations, f)
+        except Exception as e:
+            logger.warning(f"Error saving cache: {str(e)}")
+        
+        # Emit locations
+        self.locations_signal.emit(locations)
+        
+    def _on_error(self, error_message):
+        """Handle errors from the data fetch thread"""
+        logger.error(f"Data fetch error: {error_message}")
+        self.error_signal.emit(error_message)

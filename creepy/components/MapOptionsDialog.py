@@ -1,8 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-                            QCheckBox, QComboBox, QGroupBox, QSlider, QSpinBox,
-                            QColorDialog, QFormLayout, QDialogButtonBox)
+
+from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
+                           QLabel, QCheckBox, QComboBox, QGroupBox, QFormLayout,
+                           QSpinBox, QDialogButtonBox, QColorDialog, QLineEdit)
 from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtGui import QColor
 
@@ -10,10 +11,27 @@ class MapOptionsDialog(QDialog):
     """Dialog for configuring map display options"""
     
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Map Display Options")
-        self.resize(450, 500)
-        self.settings = QSettings("CreepyAI", "Creepy")
+        super(MapOptionsDialog, self).__init__(parent)
+        
+        self.setWindowTitle("Map Options")
+        self.setMinimumWidth(400)
+        
+        # Load current settings
+        self.settings = QSettings("CreepyAI", "CreepyAI")
+        self.map_settings = {
+            'map_type': self.settings.value('map/type', 'OpenStreetMap'),
+            'cluster_points': self.settings.value('map/cluster_points', True, type=bool),
+            'show_lines': self.settings.value('map/show_lines', True, type=bool),
+            'line_color': self.settings.value('map/line_color', '#3388ff'),
+            'line_weight': self.settings.value('map/line_weight', 3, type=int),
+            'marker_size': self.settings.value('map/marker_size', 10, type=int),
+            'heatmap_enabled': self.settings.value('map/heatmap_enabled', False, type=bool),
+            'heatmap_radius': self.settings.value('map/heatmap_radius', 25, type=int),
+            'heatmap_intensity': self.settings.value('map/heatmap_intensity', 5, type=int),
+            'heatmap_gradient_start': self.settings.value('map/heatmap_gradient_start', 'rgba(0, 255, 0, 0.7)'),
+            'heatmap_gradient_end': self.settings.value('map/heatmap_gradient_end', 'rgba(255, 0, 0, 0.7)')
+        }
+        
         self.setupUi()
         self.loadSettings()
         
@@ -26,7 +44,7 @@ class MapOptionsDialog(QDialog):
         map_type_layout = QVBoxLayout()
         
         self.map_type_combo = QComboBox()
-        self.map_type_combo.addItems(["Roadmap", "Satellite", "Hybrid", "Terrain"])
+        self.map_type_combo.addItems(["OpenStreetMap", "Google Maps", "Bing Maps", "Mapbox"])
         map_type_layout.addWidget(self.map_type_combo)
         
         map_type_group.setLayout(map_type_layout)
@@ -40,11 +58,6 @@ class MapOptionsDialog(QDialog):
         self.marker_size_spin.setRange(1, 20)
         self.marker_size_spin.setValue(10)
         marker_layout.addRow("Marker Size:", self.marker_size_spin)
-        
-        self.marker_opacity_slider = QSlider(Qt.Horizontal)
-        self.marker_opacity_slider.setRange(1, 10)
-        self.marker_opacity_slider.setValue(8)
-        marker_layout.addRow("Marker Opacity:", self.marker_opacity_slider)
         
         self.cluster_markers_check = QCheckBox("Cluster nearby markers")
         marker_layout.addRow(self.cluster_markers_check)
@@ -111,20 +124,19 @@ class MapOptionsDialog(QDialog):
         
     def loadSettings(self):
         """Load settings from QSettings"""
-        self.map_type_combo.setCurrentText(self.settings.value("map/type", "Roadmap"))
-        self.marker_size_spin.setValue(int(self.settings.value("map/marker_size", 10)))
-        self.marker_opacity_slider.setValue(int(self.settings.value("map/marker_opacity", 8)))
-        self.cluster_markers_check.setChecked(self.settings.value("map/cluster_markers", True, type=bool))
-        self.show_labels_check.setChecked(self.settings.value("map/show_labels", True, type=bool))
-        self.heatmap_radius_spin.setValue(int(self.settings.value("map/heatmap_radius", 30)))
-        self.heatmap_intensity_slider.setValue(int(self.settings.value("map/heatmap_intensity", 5)))
-        self.show_timeline_check.setChecked(self.settings.value("map/show_timeline", True, type=bool))
-        self.animate_movement_check.setChecked(self.settings.value("map/animate_movement", False, type=bool))
-        self.show_photos_check.setChecked(self.settings.value("map/show_photos", True, type=bool))
+        self.map_type_combo.setCurrentText(self.map_settings['map_type'])
+        self.marker_size_spin.setValue(self.map_settings['marker_size'])
+        self.cluster_markers_check.setChecked(self.map_settings['cluster_points'])
+        self.show_labels_check.setChecked(self.map_settings['show_lines'])
+        self.heatmap_radius_spin.setValue(self.map_settings['heatmap_radius'])
+        self.heatmap_intensity_slider.setValue(self.map_settings['heatmap_intensity'])
+        self.show_timeline_check.setChecked(self.map_settings['heatmap_enabled'])
+        self.animate_movement_check.setChecked(self.map_settings['heatmap_enabled'])
+        self.show_photos_check.setChecked(self.map_settings['heatmap_enabled'])
         
         # Load colors
-        start_color = self.settings.value("map/heatmap_start_color", "rgba(0, 255, 0, 0.7)")
-        end_color = self.settings.value("map/heatmap_end_color", "rgba(255, 0, 0, 0.7)")
+        start_color = self.map_settings['heatmap_gradient_start']
+        end_color = self.map_settings['heatmap_gradient_end']
         self.gradient_start_button.setStyleSheet(f"background-color: {start_color};")
         self.gradient_end_button.setStyleSheet(f"background-color: {end_color};")
         
@@ -132,20 +144,19 @@ class MapOptionsDialog(QDialog):
         """Save settings to QSettings"""
         self.settings.setValue("map/type", self.map_type_combo.currentText())
         self.settings.setValue("map/marker_size", self.marker_size_spin.value())
-        self.settings.setValue("map/marker_opacity", self.marker_opacity_slider.value())
-        self.settings.setValue("map/cluster_markers", self.cluster_markers_check.isChecked())
-        self.settings.setValue("map/show_labels", self.show_labels_check.isChecked())
+        self.settings.setValue("map/cluster_points", self.cluster_markers_check.isChecked())
+        self.settings.setValue("map/show_lines", self.show_labels_check.isChecked())
         self.settings.setValue("map/heatmap_radius", self.heatmap_radius_spin.value())
         self.settings.setValue("map/heatmap_intensity", self.heatmap_intensity_slider.value())
-        self.settings.setValue("map/show_timeline", self.show_timeline_check.isChecked())
-        self.settings.setValue("map/animate_movement", self.animate_movement_check.isChecked())
-        self.settings.setValue("map/show_photos", self.show_photos_check.isChecked())
+        self.settings.setValue("map/heatmap_enabled", self.show_timeline_check.isChecked())
+        self.settings.setValue("map/heatmap_enabled", self.animate_movement_check.isChecked())
+        self.settings.setValue("map/heatmap_enabled", self.show_photos_check.isChecked())
         
         # Save colors - extract from stylesheet
         start_color = self.gradient_start_button.styleSheet().split(":")[-1].strip().rstrip(";")
         end_color = self.gradient_end_button.styleSheet().split(":")[-1].strip().rstrip(";")
-        self.settings.setValue("map/heatmap_start_color", start_color)
-        self.settings.setValue("map/heatmap_end_color", end_color)
+        self.settings.setValue("map/heatmap_gradient_start", start_color)
+        self.settings.setValue("map/heatmap_gradient_end", end_color)
     
     def choose_start_color(self):
         """Show color dialog for selecting gradient start color"""

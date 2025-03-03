@@ -1,93 +1,216 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map_canvas { height: 100% }
+<head>
+    <meta charset="utf-8" />
+    <title>CreepyAI Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .legend {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+        .legend i {
+            width: 16px;
+            height: 16px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        .time-slider {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+        .time-slider-label {
+            text-align: center;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .time-slider-container {
+            display: flex;
+            align-items: center;
+        }
+        .time-slider-container input {
+            flex-grow: 1;
+            margin: 0 10px;
+        }
     </style>
-    <script type="text/javascript"
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCcUbHMTn2FZlsn7kaljhVKSy0L5IfZKxs&sensor=true&libraries=visualization">
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([0, 0], 2);
+        
+        // Add OpenStreetMap layer (no API key required)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Initialize marker clusters
+        var markerClusters = L.markerClusterGroup();
+        map.addLayer(markerClusters);
+        
+        // Markers array and source grouping
+        var markers = [];
+        var markersBySource = {};
+        
+        // Set up Qt web channel
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            window.pyHandler = channel.objects.pyHandler;
+            
+            // Notify Python that the map is ready
+            if (window.pyHandler) {
+                window.pyHandler.map_ready();
+            }
+        });
+        
+        // Add marker function with color based on source
+        function addMarker(latitude, longitude, title, description, source) {
+            var color = getColorForSource(source);
+            var icon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style='background-color:${color}' class='marker-pin'></div>`,
+                iconSize: [30, 42],
+                iconAnchor: [15, 42]
+            });
+            
+            var marker = L.marker([latitude, longitude], {icon: icon});
+            
+            if (title) {
+                marker.bindTooltip(title);
+            }
+            
+            if (description) {
+                marker.bindPopup(description);
+            }
+            
+            // Track by source for filtering
+            if (!markersBySource[source]) {
+                markersBySource[source] = [];
+            }
+            markersBySource[source].push(marker);
+            
+            // Add to cluster group
+            markerClusters.addLayer(marker);
+            
+            // Store in global markers array
+            markers.push(marker);
+            return markers.length - 1;
+        }
+        
+        // Get color for source
+        function getColorForSource(source) {
+            var sourceColors = {
+                'twitter': '#1DA1F2',
+                'facebook': '#4267B2',
+                'instagram': '#C13584',
+                'flickr': '#FF0084',
+                'foursquare': '#F94877',
+                'google': '#4285F4',
+                'linkedin': '#0077B5',
+                'pinterest': '#E60023',
+                'snapchat': '#FFFC00',
+                'tiktok': '#000000',
+                'local_files': '#00C853'
+            };
+            
+            var color = '#FF5722'; // Default orange
+            
+            // Find matching source
+            for (var key in sourceColors) {
+                if (source.toLowerCase().includes(key)) {
+                    color = sourceColors[key];
+                    break;
+                }
+            }
+            
+            return color;
+        }
+        
+        // Clear markers
+        function clearMarkers() {
+            markerClusters.clearLayers();
+            markers = [];
+            markersBySource = {};
+        }
+        
+        // Filter markers by source
+        function filterMarkersBySource(sources) {
+            markerClusters.clearLayers();
+            
+            if (!sources || sources.length === 0) {
+                // Show all markers
+                for (var i = 0; i < markers.length; i++) {
+                    markerClusters.addLayer(markers[i]);
+                }
+            } else {
+                // Show only markers from selected sources
+                for (var source of sources) {
+                    var sourceMarkers = markersBySource[source];
+                    if (sourceMarkers) {
+                        for (var i = 0; i < sourceMarkers.length; i++) {
+                            markerClusters.addLayer(sourceMarkers[i]);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fit bounds to markers
+        function fitMapToMarkers() {
+            if (markers.length > 0) {
+                var group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+        
+        // Create legend
+        function createLegend() {
+            var legend = L.control({position: 'bottomright'});
+            
+            legend.onAdd = function(map) {
+                var div = L.DomUtil.create('div', 'legend');
+                var sources = Object.keys(markersBySource);
+                var labels = [];
+                
+                div.innerHTML = '<h4>Data Sources</h4>';
+                
+                for (var i = 0; i < sources.length; i++) {
+                    var color = getColorForSource(sources[i]);
+                    div.innerHTML += 
+                        '<i style="background:' + color + '"></i> ' +
+                        sources[i] + '<br>';
+                }
+                
+                return div;
+            };
+            
+            legend.addTo(map);
+        }
     </script>
-    <script type="text/javascript">
-      var markersArray = [];
-      var locArray = [];
-      var map = null;
-      var heatmap = null;
-      var infowindow = new google.maps.InfoWindow({
-  		  });
-      function initialize() {
-        var mapOptions = {
-          center: new google.maps.LatLng(38.448244914157165, 24.004483222961426),
-          zoom: 2,
-          mapTypeId: google.maps.MapTypeId.ROADMAP
-        };
-        map = new google.maps.Map(document.getElementById("map_canvas"),
-            mapOptions);
-      }
-      
-      function addMarker(lat, lng, context) {
-  	      var myLatLng = new google.maps.LatLng(lat, lng);
-          var marker = new google.maps.Marker({
-            position: myLatLng,
-            map: map
-          });
-          google.maps.event.addListener(marker, 'click', function() {
-            infowindow.setContent(context)
-   			infowindow.open(map,marker);
-  		  });
-  		  markersArray.push(marker);
-  		  locArray.push(myLatLng);
- 		}
- 		
- 		function centerMap(lat, lng) {
- 			var myLatLng = new google.maps.LatLng(lat, lng);
- 			map.setCenter(myLatLng);
- 		}
- 		function setZoom(level){
- 		    map.setZoom(level);
- 		}
- 		
- 		function clearMarkers() {
-		  for (var i = 0; i < markersArray.length; i++ ) {
-		    markersArray[i].setMap(null);
-		  }
-		  markersArray.length = 0;
-		}
-		
-		function hideMarkers(){
-		   for (var i = 0; i < markersArray.length; i++ ) {
-		    markersArray[i].setVisible(false);
-		  }
-		}
-		
-		function showMarkers(){
-		   for (var i = 0; i < markersArray.length; i++ ) {
-		    markersArray[i].setVisible(true);
-		  }
-		}
-		
-		function hideHeatmap(){
-		  if (heatmap){
-		    heatmap.setMap(null);
-		  }
-		}
-		
-		function showHeatmap(){
-		  var pointArray = new google.maps.MVCArray(locArray);
-          heatmap = new google.maps.visualization.HeatmapLayer({
-    		data: pointArray
-			});
-		  heatmap.set('radius',50);
-		  heatmap.set('opacity',0.6);
-		  heatmap.set('visible',true);
-		  heatmap.setMap(map);
-		}
-
-    </script>
-  </head>
-  <body onload="initialize()">
-    <div id="map_canvas" style="width:100%; height:100%"></div>
-  </body>
+</body>
 </html>

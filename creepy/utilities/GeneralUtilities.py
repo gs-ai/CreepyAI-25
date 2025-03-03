@@ -1,30 +1,208 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+"""
+General utility functions for the CreepyAI application.
+"""
+
 import os
+import re
+import json
+import logging
+import hashlib
+import datetime
+import platform
+import subprocess
+from pathlib import Path
+import urllib.parse
 import math
 import webbrowser
 import html
-import logging
-import re
-import json
-import hashlib
 import time
 from PyQt5.QtCore import QSettings
 
-# set up logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler(os.path.join(os.getcwd(), 'creepy_utilities.log'))
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
+logger = logging.getLogger('CreepyAI.Utilities')
 
-def getUserHome():
+def sanitize_filename(filename):
     """
-    Returns the user's home directory 
+    Sanitize a filename to ensure it's valid across platforms
+    
+    Args:
+        filename (str): The filename to sanitize
+        
+    Returns:
+        str: The sanitized filename
     """
-    return os.path.expanduser("~")
+    # Remove invalid characters
+    invalid_chars = r'[<>:"/\\|?*]'
+    sanitized = re.sub(invalid_chars, '_', filename)
+    
+    # Ensure it's not too long
+    if len(sanitized) > 255:
+        base, ext = os.path.splitext(sanitized)
+        sanitized = base[:250] + ext
+    
+    return sanitized
+
+def get_user_home_dir():
+    """Get the user's home directory"""
+    return str(Path.home())
+
+def get_app_data_dir():
+    """Get the appropriate application data directory for the platform"""
+    if platform.system() == 'Windows':
+        app_data = os.path.join(os.getenv('APPDATA'), 'CreepyAI')
+    elif platform.system() == 'Darwin':  # macOS
+        app_data = os.path.join(get_user_home_dir(), 'Library', 'Application Support', 'CreepyAI')
+    else:  # Linux and others
+        app_data = os.path.join(get_user_home_dir(), '.creepyai')
+    
+    # Create directory if it doesn't exist
+    if not os.path.exists(app_data):
+        os.makedirs(app_data)
+    
+    return app_data
+
+def get_temp_dir():
+    """Get the temporary directory for the application"""
+    temp_dir = os.path.join(get_app_data_dir(), 'temp')
+    
+    # Create directory if it doesn't exist
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+    
+    return temp_dir
+
+def get_projects_dir():
+    """Get the projects directory"""
+    projects_dir = os.path.join(get_user_home_dir(), 'CreepyAI_Projects')
+    
+    # Create directory if it doesn't exist
+    if not os.path.exists(projects_dir):
+        os.makedirs(projects_dir)
+    
+    return projects_dir
+
+def create_unique_filename(directory, base_name, extension):
+    """
+    Create a unique filename in the specified directory
+    
+    Args:
+        directory (str): Directory path
+        base_name (str): Base filename
+        extension (str): File extension (without dot)
+    
+    Returns:
+        str: Unique filename
+    """
+    # Sanitize base name
+    base_name = sanitize_filename(base_name)
+    
+    # Ensure extension starts with a dot
+    if not extension.startswith('.'):
+        extension = '.' + extension
+    
+    # Try the base name first
+    filename = os.path.join(directory, base_name + extension)
+    if not os.path.exists(filename):
+        return filename
+    
+    # If the file already exists, append a counter
+    counter = 1
+    while True:
+        filename = os.path.join(directory, f"{base_name}_{counter}{extension}")
+        if not os.path.exists(filename):
+            return filename
+        counter += 1
+
+def generate_hash(text):
+    """Generate a SHA-256 hash for the given text"""
+    hash_obj = hashlib.sha256(text.encode())
+    return hash_obj.hexdigest()
+
+def is_valid_url(url):
+    """Check if a URL is valid"""
+    try:
+        result = urllib.parse.urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
+
+def is_valid_email(email):
+    """Check if an email address is valid"""
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return bool(re.match(pattern, email))
+
+def format_timestamp(timestamp, include_time=True):
+    """Format a timestamp for display"""
+    if isinstance(timestamp, str):
+        try:
+            timestamp = datetime.datetime.fromisoformat(timestamp)
+        except ValueError:
+            return timestamp
+    
+    if not isinstance(timestamp, (datetime.datetime, datetime.date)):
+        return str(timestamp)
+    
+    if include_time:
+        return timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        return timestamp.strftime("%Y-%m-%d")
+
+def open_file_with_default_app(file_path):
+    """Open a file with the default application for the file type"""
+    if not os.path.exists(file_path):
+        logger.error(f"File not found: {file_path}")
+        return False
+    
+    try:
+        if platform.system() == 'Windows':
+            os.startfile(file_path)
+        elif platform.system() == 'Darwin':  # macOS
+            subprocess.call(['open', file_path])
+        else:  # Linux and others
+            subprocess.call(['xdg-open', file_path])
+        return True
+    except Exception as e:
+        logger.error(f"Error opening file {file_path}: {e}")
+        return False
+
+def open_url_in_browser(url):
+    """Open a URL in the default web browser"""
+    import webbrowser
+    
+    if not is_valid_url(url):
+        logger.error(f"Invalid URL: {url}")
+        return False
+    
+    try:
+        webbrowser.open(url)
+        return True
+    except Exception as e:
+        logger.error(f"Error opening URL {url}: {e}")
+        return False
+
+def read_json_file(file_path, default=None):
+    """Read and parse a JSON file"""
+    if not os.path.exists(file_path):
+        return default
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error reading JSON file {file_path}: {e}")
+        return default
+
+def write_json_file(file_path, data):
+    """Write data to a JSON file"""
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Error writing JSON file {file_path}: {e}")
+        return False
 
 def calcDistance(lat1, lon1, lat2, lon2):
     """Calculate distance in meters between two points using Haversine formula"""
@@ -84,10 +262,6 @@ def get_setting(key, default=None):
     settings = get_settings()
     value = settings.value(key)
     return value if value is not None else default
-
-def sanitize_filename(filename):
-    """Removes invalid characters from a filename"""
-    return re.sub(r'[\\/*?:"<>|]', "", filename)
 
 def ensure_dir(directory):
     """Ensures that a directory exists, creating it if necessary"""

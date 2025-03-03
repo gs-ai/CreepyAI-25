@@ -1,1 +1,21 @@
-52007dde6694045e2bc3f46f003cb228f1b96521
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+CreepyAI Launcher
+This script is the main entry point for the CreepyAI application.
+"""
+
+import sys
+import os
+
+# Add project root to path
+app_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, app_path)
+
+# Pass control to main module
+from CreepyMain import main
+
+if __name__ == "__main__":
+    # Make script executable
+    sys.exit(main())

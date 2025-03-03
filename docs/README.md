@@ -1,140 +1,95 @@
-# CREEPYAI-25 - OSINT INTELLIGENCE TOOL
+# CreepyAI - OSINT Geolocation Tool
 
-
-CreepyAI is an advanced open-source intelligence (OSINT) gathering and analysis tool with an intuitive graphical user interface. It helps security researchers, investigators, and analysts collect and analyze publicly available information efficiently.
+CreepyAI is a geolocation intelligence tool that collects and analyzes social media and online data to track and visualize user locations without relying on APIs.
 
 ## Features
 
-- **Multi-source Intelligence**: Gather data from social media, public records, professional networks, news sources, and image repositories
-- **User-friendly GUI**: Intuitive tabbed interface for different OSINT operations
-- **Project Management**: Create and manage investigation projects to keep related searches organized
-- **Data Visualization**: Generate network graphs, timelines, heatmaps and relationship diagrams
-- **Comprehensive Reporting**: Create executive summaries or detailed technical reports
-- **Plugin System**: Extend functionality through custom plugins
-- **Cross-platform**: Works on Windows, macOS, and Linux
+- Social media data collection through web scraping (Twitter, Facebook, Instagram, etc.)
+- Local file analysis for geolocation data (photos, KML, GPX, etc.)
+- Geolocation mapping and visualization
+- Timeline analysis of user movement patterns
+- Export capabilities (KML, HTML, CSV)
+- Extensible plugin system
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
-- Python 3.6+
-- pip package manager
-- Tkinter (usually included with Python)
-- Pillow library
+- Python 3.9 or higher
+- PyQt5
+- Internet connection for web scraping
 
-### Quick Install
+### Setup
 
-bash
-```markdown
-# Clone the repository
-git clone https://github.com/gs-ai/CreepyAI-25
-cd CreepyAI
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/CreepyAI.git
+   cd CreepyAI
+   ```
 
-# Install dependencies
-pip install -r requirements.txt
-```
+2. Create and activate a virtual environment:
+   ```
+   python -m venv creepyai25ENV
+   source creepyai25ENV/bin/activate  # On Windows: creepyai25ENV\Scripts\activate
+   ```
 
-### Running CreepyAI
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-```bash
-# Launch the GUI
-python gui_preview.py
-```
-
-## Usage
-
-### Basic Search
-
-1. Launch CreepyAI
-2. Go to the "Search" tab
-3. Enter target information (name, username, etc.)
-4. Select desired data sources
-5. Click "Start Search"
-
-### Working with Projects
-
-Projects help organize related searches:
-
-1. Go to "Projects" menu
-2. Select "Create New Project" 
-3. Name your investigation
-4. All subsequent searches will be saved in this project
-
-### Data Analysis
-
-1. Navigate to the "Analysis" tab
-2. Select visualization type (Network Graph, Timeline, etc.)
-3. Choose data sources to include
-4. Generate visualizations
-
-### Reporting
-
-1. Go to the "Reports" tab
-2. Select report type
-3. Configure options (include visualizations, raw data, etc.)
-4. Generate report
-
-## Screenshots
-
-![Dashboard](resources/screenshot_dashboard.png) *(Create screenshots later)*
-
-![Search Interface](resources/screenshot_search.png) *(Create screenshots later)*
-
-![Analysis View](resources/screenshot_analysis.png) *(Create screenshots later)*
+4. Run the application:
+   ```
+   python CreepyMain.py
+   ```
 
 ## Configuration
 
-CreepyAI stores configuration in `~/.config/creepyai/config.json`. You can modify this file directly or through the Preferences dialog in the application.
+Application settings can be configured through the GUI or by editing the configuration file located at:
+- Linux/macOS: `~/.creepyai/config.json`
+- Windows: `%USERPROFILE%\.creepyai\config.json`
 
-### API Keys
+## Usage
 
-Some data sources require API keys:
-- Go to "File" > "Preferences"
-- Select the "API Keys" tab
-- Enter your keys for various services
+### Creating a Project
 
-## Development
+1. Launch CreepyAI
+2. Click "New Project"
+3. Enter project details and target information
+4. Select data sources to use (web scraping, local files)
+5. Start the collection process
 
-### Project Structure
+### Analyzing Data
 
-```
-CreepyAI/
-├── creepyai_gui.py     # Main GUI implementation
-├── gui_preview.py      # GUI launcher
-├── resources/          # Images and other resources
-├── plugins/            # Plugin directory
-└── docs/               # Documentation
-```
+- Use the map view to visualize locations
+- Filter data by date, source, or location
+- Generate reports through the export options
 
-### Creating Plugins
+### Working with Local Files
 
-Plugins allow you to extend CreepyAI's functionality:
+CreepyAI can extract location data from various file types:
+- Photos with EXIF data
+- KML/KMZ files from Google Maps
+- GPX files from GPS devices
+- JSON files with location data
+- HTML and other content with embedded coordinates
 
-1. Create a Python file in the `plugins` directory
-2. Implement the required plugin interface
-3. Register your plugin in the system
-4. See `docs/plugin_development.md` for detailed instructions
+## Web Scraping Considerations
 
-## Contributing
+CreepyAI uses web scraping instead of APIs for data collection. Please be aware of the following:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. **Rate Limiting**: Web scraping operations are throttled to respect website limits
+2. **Legal Considerations**: Only scrape publicly available data and follow website terms of service
+3. **Accuracy**: Scraped data may be less accurate than API data
+4. **Stealth Mode**: Configure the scraping settings to avoid detection
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Plugin Development
+
+See [plugin_development_guide.md](plugin_development_guide.md) for details on creating custom plugins.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Disclaimer
-
-CreepyAI is intended for educational and legitimate research purposes only. Users are responsible for complying with applicable laws and regulations while using this tool. The developers assume no liability for misuse of this software.
-
-### Special Thanks 
-~The OG
+This project is licensed under the terms specified in the LICENSE file.
 
 
 

@@ -1,41 +1,44 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from creepy.models.InputPlugin import InputPlugin
-import flickrapi
-import datetime
-import logging
-import re
 import os
+import logging
+import urllib.request
+from urllib.parse import urlparse, parse_qs
 from configobj import ConfigObj
-from flickrapi.exceptions import FlickrError
-#set up logging
+import traceback
+
+# Set up logging without file handler
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler(os.path.join(os.getcwd(),'creepy_main.log'))
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
-class Flickr(InputPlugin):
-     
+
+# Make flickrapi import conditional
+try:
+    import flickrapi
+    FLICKR_API_AVAILABLE = True
+except ImportError:
+    logger.warning("Flickrapi module not available. Please install using 'pip install flickrapi'")
+    FLICKR_API_AVAILABLE = False
+
+class FlickrPlugin(InputPlugin):
     name = "flickr"
-    hasWizard = False
-    
-    
+    hasWizard = True
+
     def __init__(self):
-        labels_filename = self.name + ".labels"
-        labels_file = os.path.join(os.getcwd(), 'plugins', self.name, labels_filename)
-        labels_config = ConfigObj(infile=labels_file)
-        labels_config.create_empty = False
-        try:
-            logger.debug(f"Trying to load the labels file for the {self.name} plugin.")
-            self.labels = labels_config['labels']
-        except Exception as err:
-            self.labels = None
-            logger.error(f"Could not load the labels file for the {self.name} plugin.")
-            logger.exception(err)
-        self.config, self.options_string = self.readConfiguration("string_options")
-        self.api = flickrapi.FlickrAPI(self.options_string["hidden_api_key"])
+        InputPlugin.__init__(self)
+        self.configured = False
+        
+        # Only attempt to load config and authenticate if the module is available
+        if FLICKR_API_AVAILABLE:
+            try:
+                self.config, self.options_string = self.readConfiguration("string_options")
+                self.api = self.getAuthenticatedAPI()
+            except Exception as err:
+                logger.error("Error initializing Flickr plugin")
+                logger.debug(traceback.format_exc())
+                self.api = None
+        else:
+            self.api = None
 
     def searchForTargets(self, search_term):
         possibleTargets = []
@@ -74,6 +77,9 @@ class Flickr(InputPlugin):
             return None
 
     def isConfigured(self):
+        if not FLICKR_API_AVAILABLE:
+            return (False, "Flickrapi module not installed. Please install using 'pip install flickrapi'")
+            
         try:
             if not self.options_string:
                 self.options_string = self.readConfiguration("string_options")[1]

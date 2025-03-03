@@ -1,0 +1,194 @@
+(creepyai25ENV) mbaosint@Mac CreepyAI % tree
+.
+├── CreepyMain.py
+├── LICENSE
+├── TODO.md
+├── __init__.py
+├── cleanup.py
+├── core
+│   ├── __pycache__
+│   │   ├── check_compatibility.cpython-311.pyc
+│   │   └── main.cpython-311.pyc
+│   ├── check_compatibility.py
+│   ├── fix_compatibility.py
+│   ├── git_manager.py
+│   ├── install_dependencies.py
+│   ├── install_dependencies.sh
+│   ├── launch_creepyai.py
+│   ├── main.py
+│   ├── update_env_detection.py
+│   └── update_exports.py
+├── creepy
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   └── __init__.cpython-311.pyc
+│   ├── components
+│   │   ├── MapOptionsDialog.py
+│   │   ├── PluginConfigurationCheckDialog.py
+│   │   ├── PluginErrorsDialog.py
+│   │   ├── PluginsConfigurationDialog.py
+│   │   └── __pycache__
+│   │       ├── MapOptionsDialog.cpython-311.pyc
+│   │       └── PluginConfigurationCheckDialog.cpython-311.pyc
+│   ├── include
+│   │   ├── creepy_resources.qrc
+│   │   ├── export_template.html
+│   │   ├── kml_template.xml
+│   │   ├── map.html
+│   │   └── style.qss
+│   ├── models
+│   │   ├── InputPlugin.py
+│   │   ├── Location.py
+│   │   ├── LocationsList.py
+│   │   ├── PluginConfigurationListModel.py
+│   │   ├── Project.py
+│   │   ├── ProjectTree.py
+│   │   ├── ProjectWizardPluginListModel.py
+│   │   ├── ProjectWizardPossibleTargetsTable.py
+│   │   ├── ProjectWizardSelectedTargetsTable.py
+│   │   ├── __pycache__
+│   │   │   ├── Location.cpython-311.pyc
+│   │   │   ├── LocationsList.cpython-311.pyc
+│   │   │   ├── Project.cpython-311.pyc
+│   │   │   ├── ProjectWizardPluginListModel.cpython-311.pyc
+│   │   │   └── ProjectWizardSelectedTargetsTable.cpython-311.pyc
+│   │   └── plugins
+│   │       └── social_media_profiles.md
+│   ├── plugins
+│   │   ├── email_analysis.py
+│   │   ├── facebook.conf
+│   │   ├── facebook.labels
+│   │   ├── facebook.py
+│   │   ├── facebook.yapsy-plugin
+│   │   ├── flickr.conf
+│   │   ├── flickr.labels
+│   │   ├── flickr.py
+│   │   ├── flickr.yapsy-plugin
+│   │   ├── foursquare.conf
+│   │   ├── foursquare.labels
+│   │   ├── foursquare.py
+│   │   ├── foursquare.yapsy-plugin
+│   │   ├── foursquare_plugin.py
+│   │   ├── google_maps.conf
+│   │   ├── google_maps.labels
+│   │   ├── google_maps.py
+│   │   ├── google_maps.yapsy-plugin
+│   │   ├── google_maps_plugin.py
+│   │   ├── instagram.conf
+│   │   ├── instagram.labels
+│   │   ├── instagram.py
+│   │   ├── instagram.yapsy-plugin
+│   │   ├── instagram_plugin.py
+│   │   ├── linkedin.conf
+│   │   ├── linkedin.labels
+│   │   ├── linkedin.py
+│   │   ├── linkedin.yapsy-plugin
+│   │   ├── linkedin_plugin.py
+│   │   ├── local_files.conf
+│   │   ├── local_files.py
+│   │   ├── local_files.yapsy-plugin
+│   │   ├── location_history.py
+│   │   ├── mock_social.conf
+│   │   ├── mock_social.py
+│   │   ├── mock_social.yapsy-plugin
+│   │   ├── pinterest.conf
+│   │   ├── pinterest.labels
+│   │   ├── pinterest.py
+│   │   ├── pinterest.yapsy-plugin
+│   │   ├── pinterest_plugin.py
+│   │   ├── snapchat.conf
+│   │   ├── snapchat.labels
+│   │   ├── snapchat.py
+│   │   ├── snapchat.yapsy-plugin
+│   │   ├── snapchat_plugin.py
+│   │   ├── tiktok.conf
+│   │   ├── tiktok.labels
+│   │   ├── tiktok.py
+│   │   ├── tiktok.yapsy-plugin
+│   │   ├── tiktok_plugin.py
+│   │   ├── twitter.conf
+│   │   ├── twitter.labels
+│   │   ├── twitter.py
+│   │   ├── twitter.yapsy-plugin
+│   │   ├── twitter_plugin.py
+│   │   ├── wifi_mapper.py
+│   │   ├── yelp.conf
+│   │   ├── yelp.labels
+│   │   ├── yelp.py
+│   │   ├── yelp.yapsy-plugin
+│   │   └── yelp_plugin.py
+│   ├── resources
+│   │   └── icons.py
+│   ├── ui
+│   │   ├── AboutDialog.py
+│   │   ├── CheckUpdateDialog.py
+│   │   ├── CreepyUI.py
+│   │   ├── FilterLocationsDateDialog.py
+│   │   ├── FilterLocationsPointDialog.py
+│   │   ├── PersonProjectWizard.py
+│   │   ├── PluginConfigCheckdialog.py
+│   │   ├── PluginsConfig.py
+│   │   ├── UpdateCheckDialog.py
+│   │   ├── UpdateCheckDialogUI.py
+│   │   ├── VerifyDeleteDialog.py
+│   │   ├── VerifyDeleteDialogUI.py
+│   │   ├── __pycache__
+│   │   │   ├── AboutDialog.cpython-311.pyc
+│   │   │   ├── FilterLocationsDateDialog.cpython-311.pyc
+│   │   │   ├── FilterLocationsPointDialog.cpython-311.pyc
+│   │   │   ├── PersonProjectWizard.cpython-311.pyc
+│   │   │   ├── PluginsConfig.cpython-311.pyc
+│   │   │   └── creepyai_gui.cpython-311.pyc
+│   │   ├── creepy_map_view.py
+│   │   ├── creepyai_gui.py
+│   │   ├── gui_preview.py
+│   │   └── ui_template.py
+│   └── utilities
+│       ├── ExportUtils.py
+│       ├── GeneralUtilities.py
+│       ├── PluginManager.py
+│       ├── __pycache__
+│       │   ├── ExportUtils.cpython-311.pyc
+│       │   └── PluginManager.cpython-311.pyc
+│       ├── error_handling.py
+│       └── location_clustering.py
+├── creepy.txt
+├── creepy_resources_rc.py
+├── creepyai.log
+├── docs
+│   ├── CHANGELOG.md
+│   ├── HOWTO.md
+│   ├── README.md
+│   ├── SECURITY.md
+│   ├── creepyai25-tree.txt
+│   ├── kml_export_guide.md
+│   ├── plugin_development_guide.md
+│   └── python_requirements.md
+├── gui
+│   ├── aboutDialog_ai25.ui
+│   ├── creepyai25.ui
+│   ├── exportDirDialog_ai25.ui
+│   ├── filterLocationsDateDialog_ai25.ui
+│   ├── filterLocationsPointDialog_ai25.ui
+│   ├── personProjectWizard_ai25.ui
+│   ├── personProject_ai25.ui
+│   ├── pluginConfigCheckDialog_ai25.ui
+│   ├── pluginImportWizard_ai25.ui
+│   ├── pluginsConfig_ai25.ui
+│   ├── updateCheckDialog.ui
+│   └── verifyDeleteDialog.ui
+├── main
+├── ollama
+│   ├── ollama_code_analysis.py
+│   └── ollama_file_analysis.txt
+├── requirements.txt
+├── setup.py
+└── ui
+    ├── CreepyUI.py
+    ├── __init__.py
+    └── __pycache__
+        ├── CreepyUI.cpython-311.pyc
+        └── __init__.cpython-311.pyc
+
+22 directories, 168 files
+(creepyai25ENV) mbaosint@Mac CreepyAI % 

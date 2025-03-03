@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from models.InputPlugin import InputPlugin
+from creepy.models.InputPlugin import InputPlugin
 import os
 import datetime
 import json

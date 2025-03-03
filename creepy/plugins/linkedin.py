@@ -9,14 +9,16 @@ from urllib.parse import urlparse, parse_qs
 from configobj import ConfigObj
 import traceback
 
-# Set up logging
+# Set up logging without file handler (we'll use the main app's logger)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler(os.path.join(os.getcwd(), 'creepy_main.log'))
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
+
+# Remove the problematic file handler code
+# fh = logging.FileHandler(os.path.join(os.getcwd(), 'creepy_main.log'))
+# fh.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# fh.setFormatter(formatter)
+# logger.addHandler(fh)
 
 class LinkedIn(InputPlugin):
     name = "linkedin"
@@ -123,7 +125,7 @@ class LinkedIn(InputPlugin):
             layout1 = QVBoxLayout()
             txtArea = QTextEdit()
             txtArea.setReadOnly(True)
-            txtArea.setText(f"Please copy the following link to your browser window. \n\n{url}\n\nOnce you authenticate with LinkedIn you will be redirected to a link that looks like \n
+            txtArea.setText(f"Please copy the following link to your browser window. \n\n{url}\n\nOnce you authenticate with LinkedIn you will be redirected to a link that looks like \ncreepyai://callback. Copy the FULL URL and paste it below.")
         except Exception as err:
             logger.error("Error running configuration wizard for LinkedIn plugin.")
             logger.debug(traceback.format_exc())

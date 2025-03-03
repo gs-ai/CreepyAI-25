@@ -1,0 +1,20 @@
+# Core dependencies
+PyQt5>=5.15.0
+PyQt5-WebEngine>=5.15.0
+requests>=2.25.0
+beautifulsoup4>=4.9.0
+yapsy>=1.12.0
+folium>=0.12.0
+Pillow>=8.0.0
+geopy>=2.0.0
+python-dateutil>=2.8.0
+
+# Optional dependencies
+simplekml>=1.3.0
+matplotlib>=3.3.0
+pandas>=1.1.0
+
+# Development dependencies
+pytest>=6.0.0
+black>=21.5b0
+pylint>=2.8.0
