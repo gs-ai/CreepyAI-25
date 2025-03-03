@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import creepy_resources_rc
 import os
 import argparse
 import logging

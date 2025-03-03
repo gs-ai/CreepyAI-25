@@ -1,0 +1,41 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/creepy">
+        <file alias="icon/settings_32dp_000000.png">creepy/resources/settings_32dp_000000.png</file>
+        <file alias="icon/close_16dp_000000.png">creepy/resources/close_16dp_000000.png</file>
+        <file alias="icon/remove_16dp_000000.png">creepy/resources/remove_16dp_000000.png</file>
+        <file alias="icon/location-marker.png">creepy/resources/location-marker.png</file>
+        <file alias="icon/info_16dp_000000.png">creepy/resources/info_16dp_000000.png</file>
+        <file alias="icon/pin.png">creepy/resources/pin.png</file>
+        <file alias="icon/clear_all_16dp_000000.png">creepy/resources/clear_all_16dp_000000.png</file>
+        <file alias="icon/marker-icon.png">creepy/resources/marker-icon.png</file>
+        <file alias="icon/menu_24dp_000000.png">creepy/resources/menu_24dp_000000.png</file>
+        <file alias="icon/map_marker.png">creepy/resources/map_marker.png</file>
+        <file alias="icon/map-marker.png">creepy/resources/map-marker.png</file>
+        <file alias="icon/add_24dp_000000.png">creepy/resources/add_24dp_000000.png</file>
+        <file alias="icon/edit_note_24dp_000000.png">creepy/resources/edit_note_24dp_000000.png</file>
+        <file alias="icon/person_24dp_000000.png">creepy/resources/person_24dp_000000.png</file>
+        <file alias="icon/open_in_new_24dp_000000.png">creepy/resources/open_in_new_24dp_000000.png</file>
+        <file alias="icon/map_32dp_000000.png">creepy/resources/map_32dp_000000.png</file>
+        <file alias="icon/add_16dp_000000.png">creepy/resources/add_16dp_000000.png</file>
+        <file alias="icon/person_32dp_000000.png">creepy/resources/person_32dp_000000.png</file>
+        <file alias="icon/toggle_off_24dp_000000.png">creepy/resources/toggle_off_24dp_000000.png</file>
+        <file alias="icon/edit_note_16dp_000000.png">creepy/resources/edit_note_16dp_000000.png</file>
+        <file alias="icon/refresh_24dp_000000.png">creepy/resources/refresh_24dp_000000.png</file>
+        <file alias="icon/security_24dp_000000.png">creepy/resources/security_24dp_000000.png</file>
+        <file alias="icon/add_circle_outline_24dp_000000.png">creepy/resources/add_circle_outline_24dp_000000.png</file>
+        <file alias="icon/location.png">creepy/resources/location.png</file>
+        <file alias="icon/marker_icon.png">creepy/resources/marker_icon.png</file>
+        <file alias="icon/remove_24dp_000000.png">creepy/resources/remove_24dp_000000.png</file>
+        <file alias="icon/settings_24dp_000000.png">creepy/resources/settings_24dp_000000.png</file>
+        <file alias="icon/file_download_24dp_000000.png">creepy/resources/file_download_24dp_000000.png</file>
+        <file alias="icon/play_arrow_24dp_000000.png">creepy/resources/play_arrow_24dp_000000.png</file>
+        <file alias="icon/close_24dp_000000.png">creepy/resources/close_24dp_000000.png</file>
+        <file alias="icon/info_24dp_000000.png">creepy/resources/info_24dp_000000.png</file>
+        <file alias="icon/remove_circle_outline_24dp_000000.png">creepy/resources/remove_circle_outline_24dp_000000.png</file>
+        <file alias="icon/marker.png">creepy/resources/marker.png</file>
+        <file alias="icon/clear_all_24dp_000000.png">creepy/resources/clear_all_24dp_000000.png</file>
+        <file alias="icon/leaflet/images/marker-icon.png">creepy/resources/leaflet/images/marker-icon.png</file>
+        <file alias="icon/leaflet/images/marker-shadow.png">creepy/resources/leaflet/images/marker-shadow.png</file>
+    </qresource>
+</RCC>
