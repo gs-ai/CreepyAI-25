@@ -1,6 +1,0 @@
-[labels]
-client_id = Facebook App ID
-client_secret = Facebook App Secret
-redirect_uri = OAuth Redirect URI
-access_token = Facebook Access Token
-infowindow_html = HTML for Infowindow on map

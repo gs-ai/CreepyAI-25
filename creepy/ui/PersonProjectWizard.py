@@ -387,6 +387,8 @@ class SummaryPage(QWizardPage):
         
         summary += "<p><b>Selected Data Sources:</b></p>"
         summary += "<ul>"
+        if plugins is None:
+            plugins = []
         for plugin in plugins:
             summary += f"<li>{plugin}</li>"
         summary += "</ul>"
