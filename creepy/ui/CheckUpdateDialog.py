@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from PyQt5 import QtCore, QtGui, QtWidgets
+from creepy.resources.icons import Icons
 import requests
 import json
 import logging
@@ -15,7 +16,7 @@ class Ui_UpdateCheckDialog(object):
         UpdateAvailableDialog.setObjectName("UpdateAvailableDialog")
         UpdateAvailableDialog.resize(594, 300)
         icon = QIcon()
-        icon.addPixmap(QPixmap(":/creepy/logo"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(Icons.get_pixmap("logo"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         UpdateAvailableDialog.setWindowIcon(icon)
         self.buttonBox = QtWidgets.QDialogButtonBox(UpdateAvailableDialog)
         self.buttonBox.setGeometry(QtCore.QRect(240, 240, 341, 32))

@@ -8,6 +8,7 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from creepy.resources.icons import Icons
 from PyQt5.QtWebKitWidgets import QWebView
 
 try:

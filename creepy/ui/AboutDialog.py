@@ -21,7 +21,7 @@ class AboutDialog(QDialog):
         
         # Logo
         logo_label = QLabel()
-        logo_pixmap = QPixmap(":/icons/logo")
+        logo_pixmap = Icons.get_pixmap("logo")
         if not logo_pixmap.isNull():
             logo_label.setPixmap(logo_pixmap.scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             logo_label.setAlignment(Qt.AlignCenter)

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
+from creepy.resources.icons import Icons
+import creepy_resources_rc
 import os
 import logging
 import datetime
@@ -39,7 +41,29 @@ class CreepyMainWindow(QMainWindow):
     """Main window for the CreepyAI application."""
     
     def __init__(self, config_manager, parent=None):
+        # Fix: Call the parent class constructor first
         super(CreepyMainWindow, self).__init__(parent)
+        
+        # Load icon styles
+        try:
+            style_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                    "resources", "styles", "icons.css")
+            if os.path.exists(style_path):
+                with open(style_path, 'r') as css_file:
+                    self.setStyleSheet(css_file.read())
+        except Exception as e:
+            print(f"Failed to load icon styles: {e}")
+    
+        # Load icon styles
+        try:
+            style_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                    "resources", "styles", "icons.css")
+            if os.path.exists(style_path):
+                with open(style_path, 'r') as css_file:
+                    self.setStyleSheet(css_file.read())
+        except Exception as e:
+            print(f"Failed to load icon styles: {e}")
+    
         self.setWindowTitle("CreepyAI - Geolocation Intelligence")
         self.resize(1200, 800)
         
@@ -102,45 +126,46 @@ class CreepyMainWindow(QMainWindow):
         """Create application toolbars."""
         # Main toolbar
         self.main_toolbar = QToolBar("Main Toolbar")
+        self.main_toolbar.setObjectName("MainToolbar")  # Fix: Set objectName for toolbar
         self.main_toolbar.setIconSize(QSize(32, 32))
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         
         # Project actions
-        self.action_new_project = QAction(QIcon(":/icons/new_project"), "New Project", self)
+        self.action_new_project = QAction(Icons.get_icon("new_project"), "New Project", self)
         self.action_new_project.triggered.connect(self.create_new_project)
         self.main_toolbar.addAction(self.action_new_project)
         
-        self.action_open_project = QAction(QIcon(":/icons/open_project"), "Open Project", self)
+        self.action_open_project = QAction(Icons.get_icon("open_project"), "Open Project", self)
         self.action_open_project.triggered.connect(self.open_project)
         self.main_toolbar.addAction(self.action_open_project)
         
-        self.action_save_project = QAction(QIcon(":/icons/save_project"), "Save Project", self)
+        self.action_save_project = QAction(Icons.get_icon("save_project"), "Save Project", self)
         self.action_save_project.triggered.connect(self.save_project)
         self.main_toolbar.addAction(self.action_save_project)
         
         self.main_toolbar.addSeparator()
         
         # Analysis actions
-        self.action_analyze = QAction(QIcon(":/icons/analyze"), "Analyze Data", self)
+        self.action_analyze = QAction(Icons.get_icon("analyze"), "Analyze Data", self)
         self.action_analyze.triggered.connect(self.analyze_data)
         self.main_toolbar.addAction(self.action_analyze)
         
-        self.action_export = QAction(QIcon(":/icons/export"), "Export Data", self)
+        self.action_export = QAction(Icons.get_icon("export"), "Export Data", self)
         self.action_export.triggered.connect(self.export_project)
         self.main_toolbar.addAction(self.action_export)
         
         self.main_toolbar.addSeparator()
         
         # Filter actions
-        self.action_filter_date = QAction(QIcon(":/icons/filter_date"), "Filter by Date", self)
+        self.action_filter_date = QAction(Icons.get_icon("filter_date"), "Filter by Date", self)
         self.action_filter_date.triggered.connect(self.filter_by_date)
         self.main_toolbar.addAction(self.action_filter_date)
         
-        self.action_filter_location = QAction(QIcon(":/icons/filter_location"), "Filter by Location", self)
+        self.action_filter_location = QAction(Icons.get_icon("filter_location"), "Filter by Location", self)
         self.action_filter_location.triggered.connect(self.filter_by_location)
         self.main_toolbar.addAction(self.action_filter_location)
         
-        self.action_clear_filters = QAction(QIcon(":/icons/clear_filters"), "Clear Filters", self)
+        self.action_clear_filters = QAction(Icons.get_icon("clear_filters"), "Clear Filters", self)
         self.action_clear_filters.triggered.connect(self.clear_filters)
         self.main_toolbar.addAction(self.action_clear_filters)
     

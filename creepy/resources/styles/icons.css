@@ -1,0 +1,34 @@
+
+/* Icons styling for CreepyAI */
+QToolBar {
+    spacing: 4px;
+    padding: 2px;
+    background-color: #f0f0f0;
+}
+
+QToolButton {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 2px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+}
+
+QToolButton:hover {
+    background-color: #e0e0e0;
+    border: 1px solid #c0c0c0;
+}
+
+QToolButton:pressed {
+    background-color: #d0d0d0;
+    border: 1px solid #a0a0a0;
+}
+
+/* Make icons visible in menus */
+QMenu::item {
+    padding: 6px 24px 6px 24px;
+}
+
+QMenu::icon {
+    padding-left: 4px;
+}

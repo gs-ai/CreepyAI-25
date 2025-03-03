@@ -13,6 +13,8 @@ from PyQt5.QtCore import QUrl, QTimer, QObject, pyqtSlot
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWebChannel import QWebChannel
 
+from creepy.resources.icons import Icons
+
 logger = logging.getLogger(__name__)
 
 class CreepyMapView(QWidget):
@@ -24,13 +26,24 @@ class CreepyMapView(QWidget):
     def __init__(self, parent=None):
         super(CreepyMapView, self).__init__(parent)
         
+        # Debug icon loading
+        self.logger = logging.getLogger(__name__)
+        self.logger.info('Map view initialized, checking icons...')
+        icon_names = ['add_24dp_000000', 'remove_24dp_000000', 'map_32dp_000000', 'person_24dp_000000']
+        for name in icon_names:
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'resources', f'{name}.png')
+            if os.path.exists(icon_path):
+                self.logger.info(f'Icon {name} found at {icon_path}')
+            else:
+                self.logger.warning(f'Icon {name} NOT found at {icon_path}')
+        
         self.parent = parent
         self.locations = []
         self.markers = []
         self.map_loaded = False
-        
+
         self._setup_ui()
-        
+
         # Create a timer to retry loading if the map doesn't load initially
         self.load_retry_timer = QTimer()
         self.load_retry_timer.timeout.connect(self._reload_map)
@@ -90,7 +103,7 @@ class CreepyMapView(QWidget):
             )
             
             # If template exists, load it
-            if os.path.exists(template_path):
+            if (os.path.exists(template_path)):
                 logger.debug(f"Loading map template from: {template_path}")
                 map_url = QUrl.fromLocalFile(template_path)
                 self.web_view.load(map_url)

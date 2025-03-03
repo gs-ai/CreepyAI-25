@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+from creepy.resources.icons import Icons
 import logging
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, 

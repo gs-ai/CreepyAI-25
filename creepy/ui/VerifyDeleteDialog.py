@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox
+from creepy.resources.icons import Icons
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon, QPixmap
 
@@ -20,7 +21,7 @@ class VerifyDeleteDialog(QDialog):
         # Warning icon and message
         icon_layout = QHBoxLayout()
         icon_label = QLabel()
-        warning_icon = QPixmap(":/icons/warning")
+        warning_icon = Icons.get_pixmap("warning")
         if not warning_icon.isNull():
             icon_label.setPixmap(warning_icon.scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         icon_layout.addWidget(icon_label)
