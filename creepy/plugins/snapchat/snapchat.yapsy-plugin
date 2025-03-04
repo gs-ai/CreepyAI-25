@@ -1,0 +1,9 @@
+[Core]
+Name = Snapchat Plugin
+Module = snapchat
+
+[Documentation]
+Author = Your Name
+Version = 0.1
+Website = https://www.geocreepy.net
+Description = Retrieves geo-locations from a user's Snapchat story with enhanced error handling and logging.

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CreepyAI Location Export</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        .info-window { max-width: 300px; }
+        .controls { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+</head>
+<body>
+    <div class="controls">
+        <h3>CreepyAI Export</h3>
+        <div>Points: <span id="point-count">0</span></div>
+        <div>Date Range: <span id="date-range">N/A</span></div>
+        <div>
+            <label for="heatmap-toggle">Heat Map:</label>
+            <input type="checkbox" id="heatmap-toggle">
+        </div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script>
+        // Data will be replaced by export script
+        var LOCATIONS = [];
+        
+        // Initialize map
+        var map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Add markers
+        var markers = [];
+        var heatData = [];
+        
+        LOCATIONS.forEach(function(loc) {
+            // Create marker
+            var marker = L.marker([loc.lat, loc.lng])
+                .bindPopup(`
+                    <div class="info-window">
+                        <h3>${loc.name}</h3>
+                        <p>Date: ${loc.date}</p>
+                        <p>Source: ${loc.source}</p>
+                        <p>${loc.context}</p>
+                    </div>
+                `);
+            markers.push(marker);
+            heatData.push([loc.lat, loc.lng, 1]);
+        });
+        
+        // Create layers
+        var markerLayer = L.layerGroup(markers).addTo(map);
+        var heatLayer = L.heatLayer(heatData, {radius: 25}).addTo(map);
+        heatLayer.setOptions({minOpacity: 0.3, maxZoom: 18});
+        heatLayer.remove();
+        
+        // Add toggle functionality
+        document.getElementById('heatmap-toggle').addEventListener('change', function(e) {
+            if (this.checked) {
+                markerLayer.remove();
+                heatLayer.addTo(map);
+            } else {
+                heatLayer.remove();
+                markerLayer.addTo(map);
+            }
+        });
+        
+        // Update info
+        document.getElementById('point-count').textContent = LOCATIONS.length;
+        
+        // If we have points, calculate date range
+        if (LOCATIONS.length > 0) {
+            var dates = LOCATIONS.map(loc => new Date(loc.date.replace(' +0000', 'Z')));
+            var minDate = new Date(Math.min.apply(null, dates));
+            var maxDate = new Date(Math.max.apply(null, dates));
+            
+            document.getElementById('date-range').textContent = 
+                minDate.toLocaleDateString() + ' - ' + maxDate.toLocaleDateString();
+                
+            // Fit bounds to markers
+            if (markers.length > 0) {
+                var group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+    </script>
+</body>
+</html>

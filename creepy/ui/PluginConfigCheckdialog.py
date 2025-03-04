@@ -8,7 +8,10 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt4 import QtCore, QtGui
+<<<<<<< HEAD
 from creepy.resources.icons import Icons
+=======
+>>>>>>> gs-ai-patch-1
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

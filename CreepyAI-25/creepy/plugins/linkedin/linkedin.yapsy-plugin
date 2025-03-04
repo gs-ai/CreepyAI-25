@@ -1,0 +1,9 @@
+[Core]
+Name = LinkedIn Plugin
+Module = linkedin
+
+[Documentation]
+Author = Ioannis Kakavas
+Version = 0.1
+Website = https://www.geocreepy.net
+Description = Retrieves geo-locations from a user's LinkedIn activity with enhanced error handling and logging.

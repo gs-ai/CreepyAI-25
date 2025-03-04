@@ -1,0 +1,9 @@
+[Core]
+Name = Mock Social Media Plugin
+Module = mock_social
+
+[Documentation]
+Author = CreepyAI Project
+Version = 1.0
+Website = https://geocreepy.com
+Description = Generate mock social media data for testing without requiring API keys

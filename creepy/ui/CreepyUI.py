@@ -7,9 +7,13 @@
 #
 # WARNING! All changes made in this file will be lost!
 
+<<<<<<< HEAD
 from PyQt5 import QtCore, QtGui, QtWidgets
 from creepy.resources.icons import Icons
 from PyQt5.QtWebKitWidgets import QWebView
+=======
+from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets
+>>>>>>> gs-ai-patch-1
 
 try:
     _fromUtf8 = lambda s: s
@@ -55,7 +59,11 @@ class Ui_CreepyMainWindow(object):
         self.mapPage.setObjectName(_fromUtf8("mapPage"))
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.mapPage)
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
+<<<<<<< HEAD
         self.mapWebView = QWebView(self.mapPage)
+=======
+        self.mapWebView = QtWebEngineWidgets.QWebEngineView(self.mapPage)
+>>>>>>> gs-ai-patch-1
         self.mapWebView.setAutoFillBackground(True)
         self.mapWebView.setUrl(QtCore.QUrl(_fromUtf8("about:blank")))
         self.mapWebView.setObjectName(_fromUtf8("mapWebView"))

@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+<<<<<<< HEAD
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
 from PyQt5.QtGui import QIcon, QPixmap
+=======
+from PyQt4.QtCore import QAbstractItemModel
+from PyQt4.QtCore import QModelIndex
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QIcon,QPixmap
+from PyQt4.QtCore import QVariant
+>>>>>>> gs-ai-patch-1
 
 class ProjectTreeModel(QAbstractItemModel):
     def __init__(self, root, parent=None):
@@ -20,6 +28,7 @@ class ProjectTreeModel(QAbstractItemModel):
         return 1
     
     def data(self, index, role):
+<<<<<<< HEAD
         if not index.isValid():
             return None
             
@@ -36,11 +45,29 @@ class ProjectTreeModel(QAbstractItemModel):
                 return QIcon(QPixmap(':/cr/analysis.png'))
         
         return None
+=======
+        node = index.internalPointer()
+        if index.isValid():
+            if role == Qt.DisplayRole:
+                return QVariant(node.name())
+            if role == Qt.DecorationRole:
+                if node.nodeType() == 'PROJECT':
+                    return QIcon(QPixmap(':/creepy/folder'))
+                if node.nodeType() == "LOCATIONS":
+                    return QIcon(QPixmap(':/creepy/marker'))
+                if node.nodeType() == 'ANALYSIS':
+                    return QIcon(QPixmap(':/cr/analysis.png'))
+        else:
+            return QVariant()
+>>>>>>> gs-ai-patch-1
     
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return 'Projects'
+<<<<<<< HEAD
         return None
+=======
+>>>>>>> gs-ai-patch-1
     
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -72,7 +99,13 @@ class ProjectTreeModel(QAbstractItemModel):
         
         return self._rootNode
     
+<<<<<<< HEAD
     def insertRows(self, position, rows, parent=QModelIndex()):
+=======
+    
+    def insertRows(self, position, rows, parent=QModelIndex()):
+        
+>>>>>>> gs-ai-patch-1
         parentNode = self.getNode(parent)
         self.beginInsertRows(parent, position, position+rows-1)
         for row in range(rows):
@@ -82,6 +115,10 @@ class ProjectTreeModel(QAbstractItemModel):
         return success
     
     def insertProjects(self, position, rows, parent=QModelIndex()):
+<<<<<<< HEAD
+=======
+        
+>>>>>>> gs-ai-patch-1
         parentNode = self.getNode(parent)
         self.beginInsertRows(parent, position, position+rows-1)
         for row in range(rows):
@@ -97,9 +134,15 @@ class ProjectTreeModel(QAbstractItemModel):
             success = parentNode.removeChild(position)
         self.endRemoveRows()
         return success
+<<<<<<< HEAD
 
 # No changes needed for these classes
 class ProjectTreeNode(object):
+=======
+    
+class ProjectTreeNode(object):
+    
+>>>>>>> gs-ai-patch-1
     def __init__(self, name, parent=None):
         self._name = name
         self._children = []
@@ -114,7 +157,10 @@ class ProjectTreeNode(object):
             
     def addChild(self, child):
         self._children.append(child)
+<<<<<<< HEAD
         child._parent = self
+=======
+>>>>>>> gs-ai-patch-1
         
     def insertChild(self, position, child):
         if 0 <= position <= len(self._children):
@@ -145,6 +191,10 @@ class ProjectTreeNode(object):
         else:
             return 0
         
+<<<<<<< HEAD
+=======
+        
+>>>>>>> gs-ai-patch-1
     def nodeType(self):
         return self._type
     

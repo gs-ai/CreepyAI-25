@@ -1,0 +1,9 @@
+[Core]
+Name = TikTok Plugin
+Module = tiktok
+
+[Documentation]
+Author = CreepyAI Team
+Version = 1.0
+Website = https://creepyai.example.com
+Description = Extract location data from TikTok videos by analyzing POI tags, descriptions, and metadata

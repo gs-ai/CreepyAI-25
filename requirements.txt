@@ -1,4 +1,5 @@
 # Core dependencies
+<<<<<<< HEAD
 PyQt5>=5.15.0
 PyQt5-WebEngine>=5.15.0
 requests>=2.26.0
@@ -20,3 +21,44 @@ black>=21.5b0
 pylint>=2.8.0
 piexif>=1.1.3
 lxml>=4.6.3
+=======
+yapsy==1.12.2
+configobj==5.0.9
+requests==2.32.2
+beautifulsoup4==4.11.1
+numpy==1.23.3
+scikit-learn==1.5.1
+python-dateutil==2.8.2
+Pillow==10.3.0
+
+# Web scraping and API tools
+lxml==4.9.1
+html5lib==1.1
+pyquery==1.4.3
+fake-useragent==0.1.11
+
+# Geolocation specific libraries
+geopy==2.2.0
+folium==0.12.1
+gpxpy==1.5.0
+
+# Data processing
+pandas==1.5.0
+matplotlib==3.6.0
+seaborn==0.12.0
+
+# GUI dependencies - these should be installed with conda
+# conda install -c conda-forge pyqt=5.15
+# conda install -c conda-forge pyqtwebkit
+
+# Development tools
+pytest==7.1.3
+black==24.3.0
+flake8==5.0.4
+mypy==0.971
+isort==5.10.1
+
+# Documentation
+sphinx==5.2.3
+sphinx-rtd-theme==1.0.0
+>>>>>>> gs-ai-patch-1

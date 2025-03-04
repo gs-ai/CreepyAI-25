@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -396,18 +397,29 @@ class LocationsList(QObject):
         # This is a placeholder since the actual filter logic would depend on what filter is active
         # In a real implementation, we would store filter parameters and check against them
         return True
+=======
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+from PyQt4.QtCore import QAbstractTableModel
+from PyQt4.QtCore import Qt, QVariant
+>>>>>>> gs-ai-patch-1
 
 class LocationsTableModel(QAbstractTableModel):
     def __init__(self, locations, parent=None):
         self.locations = locations
         super(LocationsTableModel,self).__init__()
         
+<<<<<<< HEAD
+=======
+        
+>>>>>>> gs-ai-patch-1
     def rowCount(self, index):
         return len(self.locations)
     
     def columnCount(self, index):
         return 2
     
+<<<<<<< HEAD
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
             if orientation == Qt.Horizontal:
@@ -425,14 +437,41 @@ class LocationsTableModel(QAbstractTableModel):
     def data(self, index, role):
         if not index.isValid() or not (0 <= index.row() < len(self.locations)):
             return None
+=======
+        
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.TextAlignmentRole:
+            if orientation == Qt.Horizontal:
+                return QVariant(int(Qt.AlignLeft|Qt.AlignVCenter))
+            return QVariant(int(Qt.AlignRight|Qt.AlignVCenter))
+        if role != Qt.DisplayRole:
+            return QVariant()
+        if orientation == Qt.Horizontal:
+            if section == 0:
+                return QVariant('Date')
+            elif section == 1:
+                return QVariant('Location')
+        return QVariant(int(section + 1))
+    
+    def data(self, index, role):
+        if not index.isValid() or not (0 <= index.row() < len(self.locations)):
+            return QVariant()
+>>>>>>> gs-ai-patch-1
         location = self.locations[index.row()]
         column = index.column()
         if role == Qt.DisplayRole:
             if column == 0:
+<<<<<<< HEAD
                 return location.datetime.isoformat()
             if column == 1:
                 return location.shortName
         return None
+=======
+                return QVariant(location.datetime.isoformat())
+            if column == 1:
+                return QVariant(location.shortName)
+        return QVariant()
+>>>>>>> gs-ai-patch-1
     
     def getLocationFromIndex(self, index):
         try:
