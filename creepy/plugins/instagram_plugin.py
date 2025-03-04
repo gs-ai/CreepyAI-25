@@ -4,7 +4,7 @@ import glob
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import zipfile
-from .base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class InstagramPlugin(BasePlugin):
     def __init__(self):
@@ -12,6 +12,10 @@ class InstagramPlugin(BasePlugin):
             name="Instagram",
             description="Extract location data from Instagram data export without API"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "InstagramPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

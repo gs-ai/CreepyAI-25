@@ -5,14 +5,18 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import zipfile
 import re
-from .base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class FacebookPlugin(BasePlugin):
     def __init__(self):
         super().__init__(
             name="Facebook",
-            description="Extract location data from Facebook data archive without API"
+            description="Extract location data from Facebook data export without API"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "FacebookPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

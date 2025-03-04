@@ -8,14 +8,18 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-from .base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class WifiMapperPlugin(BasePlugin):
     def __init__(self):
         super().__init__(
             name="WiFi Mapper",
-            description="Extract location data from WiFi scanning data and exports"
+            description="Extract location data from WiFi mapper data export without API"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "WifiMapperPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

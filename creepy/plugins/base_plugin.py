@@ -24,7 +24,7 @@ class LocationPoint:
             "accuracy": self.accuracy
         }
 
-class BasePlugin(abc.ABC):
+class BasePlugin:
     def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
@@ -33,23 +33,17 @@ class BasePlugin(abc.ABC):
         self.data_dir = os.path.join(os.path.expanduser("~"), ".creepyai", "data")
         os.makedirs(self.data_dir, exist_ok=True)
     
-    @abc.abstractmethod
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        """Collect location data for the specified target."""
-        pass
+        raise NotImplementedError
     
-    @abc.abstractmethod
     def get_configuration_options(self) -> List[Dict[str, Any]]:
-        """Return a list of configuration options for this plugin."""
-        pass
+        raise NotImplementedError
     
     def set_configuration(self, config: Dict[str, Any]) -> None:
-        """Set the configuration for this plugin."""
         self.config = config
     
     def save_data(self, target: str, locations: List[LocationPoint]) -> None:
-        """Save collected data to a local file."""
         target_dir = os.path.join(self.data_dir, self.name)
         os.makedirs(target_dir, exist_ok=True)
         

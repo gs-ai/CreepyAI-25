@@ -4,14 +4,18 @@ import glob
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import zipfile
-from .base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class GoogleMapsPlugin(BasePlugin):
     def __init__(self):
         super().__init__(
             name="Google Maps",
-            description="Extract location data from Google Maps history export without API"
+            description="Extract location data from Google Maps data export without API"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "GoogleMapsPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

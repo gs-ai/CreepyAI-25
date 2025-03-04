@@ -4,9 +4,11 @@
 import sys
 import os
 import subprocess
+import shutil
 import logging
 import platform
 import argparse
+from utilities.PluginManager import PluginManager
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +156,14 @@ def main():
     
     # Configure logging
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    
+    plugin_manager = PluginManager()
+    plugin_manager.load_plugins()
+    
+    # Example of getting a specific plugin to check dependencies
+    plugin = plugin_manager.get_plugin('example_plugin')
+    if plugin:
+        plugin.check_dependencies()
     
     if args.system:
         install_system_dependencies()

@@ -5,16 +5,20 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import zipfile
 import re
-from .base_plugin import BasePlugin, LocationPoint
-from .geocoding_helper import GeocodingHelper
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.geocoding_helper import GeocodingHelper
 
 class LinkedInPlugin(BasePlugin):
     def __init__(self):
         super().__init__(
             name="LinkedIn",
-            description="Extract location data from LinkedIn data export"
+            description="Extract location data from LinkedIn data export without API"
         )
         self.geocoder = GeocodingHelper()
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "LinkedInPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

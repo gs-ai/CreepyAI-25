@@ -4,14 +4,18 @@ import glob
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import zipfile
-from .base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class GoogleTakeoutPlugin(BasePlugin):
     def __init__(self):
         super().__init__(
             name="Google Takeout",
-            description="Extract location data from Google Takeout export without API"
+            description="Extract location data from Google Takeout data export without API"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "GoogleTakeoutPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

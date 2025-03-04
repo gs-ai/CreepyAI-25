@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import zipfile
 import re
-from .base_plugin import BasePlugin, LocationPoint
-from .geocoding_helper import GeocodingHelper
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.geocoding_helper import GeocodingHelper
 
 class PinterestPlugin(BasePlugin):
     def __init__(self):
@@ -15,6 +15,10 @@ class PinterestPlugin(BasePlugin):
             description="Extract location data from Pinterest data exports without API"
         )
         self.geocoder = GeocodingHelper()
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "PinterestPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

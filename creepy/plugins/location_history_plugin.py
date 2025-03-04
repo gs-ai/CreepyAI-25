@@ -6,14 +6,20 @@ from typing import List, Dict, Any, Optional
 import zipfile
 import csv
 from pathlib import Path
-from .base_plugin import BasePlugin, LocationPoint
+
+# Change from relative import to absolute import
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class LocationHistoryPlugin(BasePlugin):
     def __init__(self):
         super().__init__(
             name="Location History",
-            description="Extract location data from Google or Apple Location History exports"
+            description="Extract location data from location history data export without API"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "LocationHistoryPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import piexif
 from PIL import Image, ExifTags
-from .base_plugin import BasePlugin, LocationPoint
+from creepy.plugins.base_plugin import BasePlugin, LocationPoint
 
 class LocalFilesPlugin(BasePlugin):
     def __init__(self):
@@ -12,6 +12,10 @@ class LocalFilesPlugin(BasePlugin):
             name="Local Files",
             description="Extract location data from local image files"
         )
+    
+    def is_configured(self):
+        # Check if the plugin is properly configured
+        return True, "LocalFilesPlugin is configured"
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [

@@ -7,6 +7,7 @@ Run this script to patch the main application file.
 
 import os
 import re
+from utilities.PluginManager import PluginManager
 
 def update_main_app():
     main_file = '/Users/mbaosint/Desktop/Projects/CreepyAI/CreepyAI-25/creepy/CreepyMain.py'
@@ -130,6 +131,14 @@ def update_main_app():
                 self.ui.statusbar.showMessage(self.tr('Error saving the export.'))'''
     
     content = export_kml_pattern.sub(new_export_functions, content)
+    
+    plugin_manager = PluginManager()
+    plugin_manager.load_plugins()
+
+    # Example of updating exports for a specific plugin
+    plugin = plugin_manager.get_plugin('example_plugin')
+    if plugin:
+        plugin.update_exports()
     
     with open(main_file, 'w', encoding='utf-8') as f:
         f.write(content)

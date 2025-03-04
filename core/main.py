@@ -120,32 +120,23 @@ def ensure_directories_exist():
 
 def init_plugin_system():
     """Initialize plugin system and verify plugins"""
-    from yapsy.PluginManager import PluginManagerSingleton
-    from creepy.models.InputPlugin import InputPlugin
-    
-    # Clear any existing singleton instances
-    PluginManagerSingleton._PluginManagerSingleton__instance = None
-    
-    # Initialize plugin manager
-    plugin_manager = PluginManagerSingleton.get()
-    plugin_manager.setCategoriesFilter({'Input': InputPlugin})
-    plugin_manager.setPluginPlaces([os.path.join(os.getcwd(), 'plugins')])
-    
-    logger.info("Locating plugins...")
-    plugin_manager.locatePlugins()
-    
-    logger.info("Loading plugins...")
-    plugin_manager.loadPlugins()
+    from utilities.PluginManager import PluginManager
+
+    plugin_manager = PluginManager()
+    plugin_manager.load_plugins()
+
+    # Example of initializing a specific plugin
+    plugin_manager.initialize_plugin('example_plugin')
     
     # Count loaded plugins
-    plugins = plugin_manager.getAllPlugins()
+    plugins = plugin_manager.get_all_plugins()
     logger.info(f"Loaded {len(plugins)} plugins")
     
     # Check for plugin configuration issues
     config_issues = []
     for plugin in plugins:
         try:
-            config_status = plugin.plugin_object.isConfigured()
+            config_status = plugin.is_configured()
             if not config_status[0]:
                 config_issues.append(f"{plugin.name}: {config_issues[1]}")
         except Exception as e:
@@ -207,7 +198,12 @@ def launch_gui():
     """Launch the graphical user interface"""
     try:
         import tkinter as tk
-        from creepyai_gui import CreepyAIGUI
+        try:
+            from .gui import CreepyAIGUI
+        except ImportError as e:
+            logger.error(f"Failed to import GUI module: {e}")
+            print("Error: Could not load GUI module. Make sure creepyai_gui is available.")
+            sys.exit(1)
         
         root = tk.Tk()
         app = CreepyAIGUI(root)
