@@ -1,0 +1,9 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="icons">
+        <file>icons/app_icon.png</file>
+    </qresource>
+    <qresource prefix="styles">
+        <file>styles/dark.qss</file>
+    </qresource>
+</RCC>

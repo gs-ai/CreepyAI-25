@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from creepy.resources.icon_mapping import ICON_MAPPING
+    from resources.icon_mapping import ICON_MAPPING
 except ImportError:
     print("Error: Could not import ICON_MAPPING. Make sure the file exists and is properly formatted.")
     sys.exit(1)

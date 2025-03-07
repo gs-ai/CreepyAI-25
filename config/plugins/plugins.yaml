@@ -1,0 +1,66 @@
+# CreepyAI Plugins Configuration
+# This file defines which plugins are available and their basic settings
+
+plugins:
+  - name: DummyPlugin
+    enabled: true
+    module: plugins.src.DummyPlugin
+    config_file: DummyPlugin.conf
+    description: A dummy plugin for testing purposes
+    version: 1.0.0
+    author: CreepyAI Team
+    dependencies: []
+    
+  - name: GeoIPPlugin
+    enabled: true
+    module: plugins.src.GeoIPPlugin
+    config_file: GeoIPPlugin.conf
+    description: Provides geo-location information for IP addresses
+    version: 1.0.0
+    author: CreepyAI Team
+    dependencies: []
+    
+  - name: SocialMediaPlugin
+    enabled: true
+    module: plugins.src.SocialMediaPlugin
+    config_file: SocialMediaPlugin.conf
+    description: Extracts data from social media platforms
+    version: 1.0.0
+    author: CreepyAI Team
+    dependencies: []
+
+  - name: MetadataExtractor
+    enabled: true
+    module: plugins.src.metadata_extractor
+    config_file: MetadataExtractor.conf
+    description: Extracts metadata from various file types
+    version: 1.0.0
+    author: CreepyAI Team
+    dependencies: ["exiftool"]
+
+  - name: FileSystemWatcher
+    enabled: false
+    module: plugins.src.file_system_watcher
+    config_file: FileSystemWatcher.conf
+    description: Monitors file system for changes and extracts location data
+    version: 0.9.0
+    author: CreepyAI Team
+    dependencies: []
+
+  - name: LocalDataHarvester
+    enabled: false
+    module: plugins.src.local_files_plugin
+    config_file: LocalDataHarvester.conf
+    description: Extracts location data from local files
+    version: 0.9.0
+    author: CreepyAI Team
+    dependencies: []
+
+  - name: WifiMonitor
+    enabled: false
+    module: plugins.src.wifi_analysis_plugin
+    config_file: WifiMonitor.conf
+    description: Monitors and analyzes WiFi networks
+    version: 0.8.0
+    author: CreepyAI Team
+    dependencies: ["scapy", "wireless-tools"]

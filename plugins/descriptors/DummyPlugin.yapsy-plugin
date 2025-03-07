@@ -1,0 +1,9 @@
+[Core]
+Name = DummyPlugin
+Module = DummyPlugin
+
+[Documentation]
+Author = CreepyAI Team
+Version = 1.0
+Website = https://geocreepy.com
+Description = A dummy plugin for testing purposes that generates random locations.

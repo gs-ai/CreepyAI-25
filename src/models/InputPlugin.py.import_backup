@@ -1,0 +1,133 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+from yapsy.IPlugin import IPlugin
+from configobj import ConfigObj
+import logging
+import os
+import json
+import traceback
+from creepy.utilities import GeneralUtilities
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+log_path = os.path.join(os.path.expanduser("~"), '.creepyai', 'logs', 'creepy_main.log')
+os.makedirs(os.path.dirname(log_path), exist_ok=True)
+fh = logging.FileHandler(log_path)
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+class InputPlugin(IPlugin):
+    """Base class for CreepyAI input plugins"""
+
+    def __init__(self):
+        self.name = "base_plugin"
+        self.description = "Base plugin class"
+        self.version = "1.0.0"
+        self.error_count = 0
+
+    def activate(self):
+        logger.info(f"Activating plugin: {self.name}")
+        
+    def deactivate(self):
+        logger.info(f"Deactivating plugin: {self.name}")
+    
+    def searchForTargets(self, search_term):
+        logger.debug(f"Base searchForTargets called with term: {search_term}")
+        return 'dummyUser'
+    
+    def loadConfiguration(self):
+        logger.debug(f"Loading configuration for {self.name}")
+    
+    def isConfigured(self):
+        return (True, "")
+    
+    def returnLocations(self, target, search_params):
+        pass
+    
+    def returnPersonalInformation(self, search_params):
+        pass
+        
+    def getConfigObj(self):
+        try:
+            config_filename = self.name + ".conf"
+            config_file = os.path.join(os.getcwd(), 'plugins', self.name, config_filename)
+            config = ConfigObj(infile=config_file)
+            config.create_empty = False
+            return config
+        except Exception as e:
+            logger.error(f"Error loading config for {self.name}: {str(e)}")
+            self.error_count += 1
+            return ConfigObj()
+    
+    def readConfiguration(self, category):
+        config, options = self.getConfigObj(), None
+        try:
+            options = config[category]
+        except Exception as err:
+            logger.error(f'Could not load the {category} for the {self.name} plugin.')
+            logger.exception(err)
+            self.error_count += 1
+        return config, options
+
+    def saveConfiguration(self, new_config):
+        config_filename = self.name + '.conf'
+        config_file = os.path.join(os.getcwd(), 'plugins', self.name, config_filename)
+        
+        try:
+            config = ConfigObj(infile=config_file)
+            config.create_empty = False
+            
+            if 'string_options' in new_config:
+                config['string_options'] = new_config['string_options']
+            
+            if 'boolean_options' in new_config:
+                config['boolean_options'] = new_config['boolean_options']
+                
+            config.write()
+            logger.info(f"Configuration for {self.name} saved successfully")
+            
+        except Exception as err:
+            logger.error(f'Could not save the configuration for the {self.name} plugin.')
+            logger.exception(err)
+            self.error_count += 1
+            raise
+
+    def loadSearchConfigurationParameters(self):
+        try:
+            config_filename = self.name + '.conf'
+            config_file = os.path.join(os.getcwd(), 'plugins', self.name, config_filename)
+            config = ConfigObj(infile=config_file)
+            config.create_empty = False
+            return config.get('search_options', {})
+        except Exception as err:
+            logger.error(f'Could not load the search configuration parameters for the {self.name} plugin.')
+            logger.exception(err)
+            self.error_count += 1
+            return None
+            
+    def getLabelForKey(self, key):
+        try:
+            labels_filename = self.name + ".labels"
+            labels_file = os.path.join(os.getcwd(), 'plugins', self.name, labels_filename)
+            
+            if os.path.exists(labels_file):
+                with open(labels_file, 'r') as f:
+                    labels = json.load(f)
+                    if key in labels:
+                        return labels[key]
+        except Exception as e:
+            logger.warning(f"Error loading labels for {self.name}: {str(e)}")
+            
+        return key
+        
+    def log_error(self, error_message, context=None):
+        self.error_count += 1
+        error_info = {
+            'plugin': self.name,
+            'error': error_message,
+            'context': context or {},
+            'traceback': traceback.format_exc()
+        }
+        logger.error(f"Plugin error: {json.dumps(error_info)}")

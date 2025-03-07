@@ -1,55 +1,73 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+"""
+Setup script for CreepyAI
+"""
+
 import os
 import sys
+import subprocess
+import stat
 
-def read_requirements():
-    """Read the requirements file"""
-    req_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+def check_environment():
+    """Check if running in a virtual environment"""
+    in_venv = sys.prefix != sys.base_prefix
+    if not in_venv:
+        print("⚠️ WARNING: You are not running in a virtual environment!")
+        response = input("Would you like to continue anyway? (y/n): ")
+        if response.lower() != 'y':
+            print("Exiting. Please create and activate a virtual environment before running setup.")
+            sys.exit(1)
+
+def install_requirements():
+    """Install requirements from requirements.txt"""
+    req_path = os.path.join(os.path.dirname(__file__), "requirements.txt")
+    if os.path.exists(req_path):
+        print("📦 Installing dependencies from requirements.txt...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-r", req_path])
+        print("✅ Dependencies installed successfully!")
+    else:
+        print("❌ requirements.txt not found!")
+
+def main():
+    """Main entry point for setup"""
+    print("Setting up CreepyAI...")
+    
+    # Get project root directory
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Change to project directory
+    os.chdir(project_dir)
+    
+    # Make sure tools directory exists
+    tools_dir = os.path.join(project_dir, 'tools')
+    if not os.path.exists(tools_dir):
+        os.makedirs(tools_dir)
+    
+    # Run setup_tools.py if it exists
+    setup_tools = os.path.join(tools_dir, 'setup_tools.py')
+    if os.path.exists(setup_tools):
+        # Make sure it's executable
+        current_mode = os.stat(setup_tools).st_mode
+        os.chmod(setup_tools, current_mode | stat.S_IXUSR)
+        
+        # Run the setup script
+        subprocess.run([sys.executable, setup_tools])
+    else:
+        print(f"Setup tools script not found at {setup_tools}")
+        print("Please make sure the tools directory is properly set up.")
+    
+    # Look for requirements.txt and install if found
+    req_file = os.path.join(project_dir, 'requirements.txt')
     if os.path.exists(req_file):
-        with open(req_file, 'r') as f:
-            return [line.strip() for line in f if line.strip() and not line.startswith('#')]
-    return []
+        print("Installing requirements...")
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', req_file])
+    
+    print("\nSetup complete!")
+    print("You can now run: ./creepyai help")
 
-# Define package metadata
-setup(
-    name='CreepyAI',
-    version='2.5.0',
-    description='Geolocation OSINT tool with AI capabilities',
-    author='CreepyAI Team',
-    author_email='info@creepyai.org',
-    url='https://github.com/creepyai/creepyai',
-    packages=find_packages(),
-    include_package_data=True,
-    install_requires=read_requirements(),
-    extras_require={
-        'kml': ['simplekml>=1.3.5'],
-        'excel': ['openpyxl>=3.0.7'],
-        'dev': [
-            'pytest>=6.2.5',
-            'pytest-qt>=4.0.0',
-            'black>=21.7b0',
-        ],
-    },
-    entry_points={
-        'console_scripts': [
-            'creepyai=creepy.ui.creepyai_gui:main',
-        ],
-    },
-    classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Environment :: X11 Applications :: Qt',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Topic :: Scientific/Engineering :: Information Analysis',
-    ],
-    python_requires='>=3.6',
-)
+if __name__ == "__main__":
+    check_environment()
+    install_requirements()
+    main()

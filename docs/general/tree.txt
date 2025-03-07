@@ -1,0 +1,576 @@
+(creepyai25ENV) mbaosint@Mac CreepyAI % tree
+.
+├── LICENSE
+├── archive
+│   ├── cli_backup
+│   │   └── src_backup
+│   │       └── cli_backup_20250306_162218
+│   │           └── cli_handler.py
+│   └── plugins_import_backup
+│       ├── email_plugin.py.import_backup
+│       ├── facebook_plugin.py.import_backup
+│       ├── flickr_plugin.py.import_backup
+│       ├── foursquare_plugin.py.import_backup
+│       ├── google_maps_plugin.py.import_backup
+│       ├── google_takeout_plugin.py.import_backup
+│       ├── idcrawl_plugin.py.import_backup
+│       ├── instagram_plugin.py.import_backup
+│       ├── linkedin_plugin.py.import_backup
+│       ├── local_files_plugin.py.import_backup
+│       ├── location_history_plugin.py.import_backup
+│       ├── pinterest_plugin.py.import_backup
+│       ├── snapchat_plugin.py.import_backup
+│       ├── tiktok_plugin.py.import_backup
+│       ├── twitter_plugin.py.import_backup
+│       ├── wifi_mapper_plugin.py.import_backup
+│       └── yelp_plugin.py.import_backup
+├── assets
+│   └── icons
+│       ├── map
+│       │   ├── __init__.py
+│       │   ├── add_16dp_000000.png
+│       │   ├── add_24dp_000000.png
+│       │   ├── add_circle_outline_24dp_000000.png
+│       │   ├── clear_all_16dp_000000.png
+│       │   ├── clear_all_24dp_000000.png
+│       │   ├── close_16dp_000000.png
+│       │   ├── close_24dp_000000.png
+│       │   ├── edit_note_16dp_000000.png
+│       │   ├── edit_note_24dp_000000.png
+│       │   ├── file_download_24dp_000000.png
+│       │   ├── info_16dp_000000.png
+│       │   ├── info_24dp_000000.png
+│       │   ├── location-marker.png
+│       │   ├── marker-shadow.png
+│       │   ├── menu_24dp_000000.png
+│       │   ├── open_in_new_24dp_000000.png
+│       │   ├── person_24dp_000000.png
+│       │   ├── person_32dp_000000.png
+│       │   ├── play_arrow_24dp_000000.png
+│       │   ├── refresh_24dp_000000.png
+│       │   ├── remove_16dp_000000.png
+│       │   ├── remove_24dp_000000.png
+│       │   ├── remove_circle_outline_24dp_000000.png
+│       │   ├── security_24dp_000000.png
+│       │   ├── settings_24dp_000000.png
+│       │   ├── settings_32dp_000000.png
+│       │   └── toggle_off_24dp_000000.png
+│       └── ui
+│           ├── add_16dp_000000.png
+│           ├── add_24dp_000000.png
+│           ├── add_circle_outline_24dp_000000.png
+│           ├── analytics_24dp_000000.png
+│           ├── app_icon.png
+│           ├── clear_24dp_000000.png
+│           ├── clear_all_16dp_000000.png
+│           ├── clear_all_24dp_000000.png
+│           ├── close_16dp_000000.png
+│           ├── close_24dp_000000.png
+│           ├── date_range_24dp_000000.png
+│           ├── edit_note_16dp_000000.png
+│           ├── edit_note_24dp_000000.png
+│           ├── export_24dp_000000.png
+│           ├── file_download_24dp_000000.png
+│           ├── folder_open_24dp_000000.png
+│           ├── menu_24dp_000000.png
+│           ├── new.png
+│           ├── open.png
+│           ├── open_in_new_24dp_000000.png
+│           ├── person_24dp_000000.png
+│           ├── person_32dp_000000.png
+│           ├── pin.png
+│           ├── place_24dp_000000.png
+│           ├── play_arrow_24dp_000000.png
+│           ├── refresh_24dp_000000.png
+│           ├── remove_16dp_000000.png
+│           ├── remove_24dp_000000.png
+│           ├── remove_circle_outline_24dp_000000.png
+│           ├── save.png
+│           ├── save_24dp_000000.png
+│           ├── security_24dp_000000.png
+│           ├── settings.png
+│           ├── settings_24dp_000000.png
+│           ├── settings_32dp_000000.png
+│           └── toggle_off_24dp_000000.png
+├── config
+│   ├── __init__.py
+│   ├── app
+│   │   ├── app_config.json
+│   │   └── kml_template.xml
+│   ├── defaults.py
+│   ├── logging
+│   │   └── logging_config.json
+│   ├── plugins
+│   │   ├── DocumentAnalyzer.conf
+│   │   ├── DummyPlugin.conf
+│   │   ├── FileSystemWatcher.conf
+│   │   ├── GeoIPPlugin.conf
+│   │   ├── GeoTrackingPlugin.conf
+│   │   ├── LocalDataHarvester.conf
+│   │   ├── MetadataExtractor.conf
+│   │   ├── NetworkScanner.conf
+│   │   ├── OfflineReconPlugin.conf
+│   │   ├── PasswordAuditor.conf
+│   │   ├── SocialMediaPlugin.conf
+│   │   ├── SocialMediaScraper.conf
+│   │   ├── WifiMonitor.conf
+│   │   ├── enhanced_geocoding_helper.conf
+│   │   ├── logging_config.json
+│   │   └── plugins.yaml
+│   └── settings_manager.py
+├── debug.log
+├── docs
+│   ├── general
+│   │   ├── CHANGELOG.md
+│   │   ├── HOWTO.md
+│   │   ├── README.md
+│   │   ├── SECURITY.md
+│   │   ├── TODO.md
+│   │   ├── next_steps.md
+│   │   └── tree.txt
+│   ├── guides
+│   │   ├── README-plugins-cli.md
+│   │   ├── kml_export_guide.md
+│   │   ├── migration_guide.md
+│   │   ├── plugin_development_guide.md
+│   │   └── python_requirements.md
+│   ├── misc
+│   │   ├── __init__.py
+│   │   ├── creepy_bckup.txt
+│   │   └── social_media_profiles.md
+│   └── troubleshooting
+│       ├── IconUsage.md
+│       ├── ManualFixInstructions.md
+│       └── MapIconTroubleshooting.md
+├── environment.yml
+├── main
+├── ollama
+│   ├── README.md
+│   ├── __init__.py
+│   ├── debug_changes.py
+│   ├── ollama_code_analysis.py
+│   └── test_ollama.py
+├── plugins
+│   ├── SocialMediaPlugin.conf
+│   ├── backups
+│   │   └── plugins_backup_20250304_210126
+│   │       ├── DummyPlugin.py
+│   │       ├── GeoIPPlugin.py
+│   │       ├── SocialMediaPlugin.py
+│   │       ├── base_plugin.py
+│   │       ├── email_plugin.py
+│   │       ├── enhanced_geocoding_helper.py
+│   │       ├── facebook_plugin.py
+│   │       ├── file_system_watcher.py
+│   │       ├── flickr_plugin.py
+│   │       ├── foursquare_plugin.py
+│   │       ├── geocoding_helper.py
+│   │       ├── google_maps_plugin.py
+│   │       ├── google_takeout_plugin.py
+│   │       ├── idcrawl_plugin.py
+│   │       ├── init_plugins.py
+│   │       ├── instagram_plugin.py
+│   │       ├── linkedin_plugin.py
+│   │       ├── local_files_plugin.py
+│   │       ├── location_history_plugin.py
+│   │       ├── metadata_extractor.py
+│   │       ├── pinterest_plugin.py
+│   │       ├── plugin_cli.py
+│   │       ├── plugin_compatibility.py
+│   │       ├── plugin_dashboard.py
+│   │       ├── plugin_data_manager.py
+│   │       ├── plugin_monitor.py
+│   │       ├── plugin_registry.py
+│   │       ├── plugin_requirements.py
+│   │       ├── plugin_testing_utils.py
+│   │       ├── plugin_uimap.py
+│   │       ├── plugin_utils.py
+│   │       ├── plugins.py
+│   │       ├── plugins_manager.py
+│   │       ├── snapchat_plugin.py
+│   │       ├── tiktok_plugin.py
+│   │       ├── twitter_plugin.py
+│   │       ├── wifi_analysis_plugin.py
+│   │       ├── wifi_mapper_plugin.py
+│   │       └── yelp_plugin.py
+│   ├── configs
+│   │   ├── DocumentAnalyzer.conf
+│   │   ├── DummyPlugin.conf
+│   │   ├── FileSystemWatcher.conf
+│   │   ├── GeoIPPlugin.conf
+│   │   ├── GeoTrackingPlugin.conf
+│   │   ├── LocalDataHarvester.conf
+│   │   ├── MetadataExtractor.conf
+│   │   ├── NetworkScanner.conf
+│   │   ├── OfflineReconPlugin.conf
+│   │   ├── PasswordAuditor.conf
+│   │   ├── SocialMediaScraper.conf
+│   │   ├── WifiMonitor.conf
+│   │   └── enhanced_geocoding_helper.conf
+│   ├── descriptors
+│   │   ├── DummyPlugin.yapsy-plugin
+│   │   ├── GeoIPPlugin.yapsy-plugin
+│   │   ├── SocialMediaPlugin.yapsy-plugin
+│   │   ├── example_plugin
+│   │   │   ├── example_plugin.py
+│   │   │   └── example_plugin.yapsy-plugin
+│   │   └── location_history_plugin.yapsy-plugin
+│   ├── documentation
+│   │   ├── README.md
+│   │   ├── plugins_documentation.md
+│   │   └── social_media_profiles.md
+│   ├── misc
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── DummyPlugin.cpython-311.pyc
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   └── base_plugin.cpython-311.pyc
+│   │   └── logging_config.json
+│   ├── plugins.yaml
+│   ├── src
+│   │   ├── DummyPlugin.py
+│   │   ├── GeoIPPlugin.py
+│   │   ├── SocialMediaPlugin
+│   │   ├── SocialMediaPlugin.py
+│   │   ├── base_plugin.py
+│   │   ├── dummy_plugin.py
+│   │   ├── email_plugin.py
+│   │   ├── enhanced_geocoding_helper.py
+│   │   ├── facebook_plugin.py
+│   │   ├── file_system_watcher.py
+│   │   ├── flickr_plugin.py
+│   │   ├── foursquare_plugin.py
+│   │   ├── geocoding_helper.py
+│   │   ├── google_maps_plugin.py
+│   │   ├── google_takeout_plugin.py
+│   │   ├── idcrawl_plugin.py
+│   │   ├── init_plugins.py
+│   │   ├── instagram_plugin.py
+│   │   ├── linkedin_plugin.py
+│   │   ├── local_files_plugin.py
+│   │   ├── location_history_plugin.py
+│   │   ├── metadata_extractor.py
+│   │   ├── pinterest_plugin.py
+│   │   ├── plugin_base.py
+│   │   ├── plugin_cli.py
+│   │   ├── plugin_compatibility.py
+│   │   ├── plugin_dashboard.py
+│   │   ├── plugin_data_manager.py
+│   │   ├── plugin_monitor.py
+│   │   ├── plugin_registry.py
+│   │   ├── plugin_requirements.py
+│   │   ├── plugin_testing_utils.py
+│   │   ├── plugin_uimap.py
+│   │   ├── plugin_utils.py
+│   │   ├── plugins.py
+│   │   ├── plugins_manager.py
+│   │   ├── snapchat_plugin.py
+│   │   ├── tiktok_plugin.py
+│   │   ├── twitter_plugin.py
+│   │   ├── wifi_analysis_plugin.py
+│   │   ├── wifi_mapper_plugin.py
+│   │   └── yelp_plugin.py
+│   └── tests
+│       └── test_facebook_plugin.py
+├── project_template
+│   └── config.yaml
+├── projects
+├── requirements.txt
+├── resources
+│   ├── README.md
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   └── __init__.cpython-311.pyc
+│   ├── creepy.qrc
+│   ├── creepy_resources.qrc
+│   ├── creepyai_resources.qrc
+│   ├── data
+│   ├── html
+│   │   └── map_template.html
+│   ├── icons.py
+│   ├── leaflet
+│   │   ├── __init__.py
+│   │   └── images
+│   │       ├── __init__.py
+│   │       ├── marker-icon.png
+│   │       └── marker-shadow.png
+│   ├── ollama_file_analysis.txt
+│   ├── resource_manager.py
+│   ├── styles
+│   │   ├── __init__.py
+│   │   ├── base.qss
+│   │   ├── dark.qss
+│   │   ├── icons.css
+│   │   └── light.qss
+│   └── templates
+│       └── default_project.yaml
+├── scripts
+│   ├── __init__.py
+│   ├── build_resources.py
+│   ├── compile_resources.py
+│   ├── compile_resources.sh
+│   ├── compile_ui.py
+│   ├── create_placeholder_icons.py
+│   ├── launch_macos.sh
+│   ├── launch_windows.bat
+│   ├── qt_setup.py
+│   ├── setup_creepyai.sh
+│   ├── setup_resources.py
+│   ├── ui_reorganization.sh
+│   ├── verify_icons.py
+│   └── verify_icons.py.import_backup
+├── src
+│   ├── __init__.py
+│   ├── cli
+│   │   └── handler
+│   │       ├── __init__.py
+│   │       ├── cli_handler.py
+│   │       └── ollama_file_analysis.txt
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── check_compatibility.py
+│   │   ├── config_manager.py
+│   │   ├── factory.py
+│   │   ├── geo
+│   │   │   └── geocoding.py
+│   │   ├── git_manager.py
+│   │   ├── launch_creepyai.py
+│   │   ├── logger.py
+│   │   ├── main.py
+│   │   ├── ui_bridge.py
+│   │   ├── update_env_detection.py
+│   │   └── update_exports.py
+│   ├── creepy
+│   │   ├── CreepyMain.py
+│   │   ├── __init__.py
+│   │   ├── creepy_resources_rc.py
+│   │   ├── creepyai
+│   │   ├── creepyai.py
+│   │   ├── creepyai_gui.py
+│   │   ├── launch_creepyai.py
+│   │   ├── run_creepyai.sh
+│   │   └── run_plugin_cli.py
+│   ├── gui
+│   │   ├── CheckUpdateDialog.py
+│   │   ├── README.md
+│   │   ├── SettingsDialog.py
+│   │   ├── UpdateCheckDialog.py
+│   │   ├── VerifyDeleteDialog.py
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   └── pyqt5_ui.cpython-311.pyc
+│   │   ├── aboutDialog.py
+│   │   ├── backup
+│   │   │   ├── CheckUpdateDialog.py.import_backup
+│   │   │   ├── PersonProjectWizard.py.import_backup
+│   │   │   ├── PluginConfigCheckdialog.py.import_backup
+│   │   │   ├── PluginsConfig.py.import_backup
+│   │   │   ├── VerifyDeleteDialog.py.import_backup
+│   │   │   ├── index.js
+│   │   │   ├── migration.js
+│   │   │   ├── personProjectWizard.py
+│   │   │   ├── plugin_dialog_fix.py.import_backup
+│   │   │   ├── structure.js
+│   │   │   └── update-imports.js
+│   │   ├── common
+│   │   ├── components
+│   │   │   ├── AboutDialog.py
+│   │   │   ├── FilterLocationsDateDialog.py
+│   │   │   ├── FilterLocationsPointDialog.py
+│   │   │   ├── MapOptionsDialog.py
+│   │   │   ├── PersonProjectWizard.py
+│   │   │   ├── PluginConfigurationCheckDialog.py
+│   │   │   ├── PluginErrorsDialog.py
+│   │   │   ├── PluginsConfigurationDialog.py
+│   │   │   ├── UpdateCheckDialog.py
+│   │   │   ├── VerifyDeleteDialog.py
+│   │   │   ├── __init__.py
+│   │   │   ├── map_widget.py
+│   │   │   └── update_check_dialog.py
+│   │   ├── dialogs
+│   │   │   ├── AboutDialog.py
+│   │   │   ├── CheckUpdateDialog.py
+│   │   │   ├── FilterLocationsDateDialog.py
+│   │   │   ├── FilterLocationsPointDialog.py
+│   │   │   ├── MapOptionsDialog.py
+│   │   │   ├── PluginConfigurationCheckDialog.py
+│   │   │   ├── PluginErrorsDialog.py
+│   │   │   ├── PluginsConfigurationDialog.py
+│   │   │   ├── SettingsDialog.py
+│   │   │   ├── UpdateCheckDialog.py
+│   │   │   ├── VerifyDeleteDialog.py
+│   │   │   ├── __init__.py
+│   │   │   ├── about_dialog.py
+│   │   │   └── exportDirDialog.py
+│   │   ├── exportDirDialog.py
+│   │   ├── filterLocationsDateDialog.py
+│   │   ├── filterLocationsPointDialog.py
+│   │   ├── main
+│   │   │   ├── CreepyMainWindow.py
+│   │   │   ├── CreepyUI.py
+│   │   │   ├── PluginConfigCheckdialog.py
+│   │   │   ├── PluginsConfig.py
+│   │   │   ├── PluginsConfigurationDialogUI.py
+│   │   │   ├── UpdateCheckDialogUI.py
+│   │   │   ├── VerifyDeleteDialogUI.py
+│   │   │   ├── __init__.py
+│   │   │   ├── creepy_map_view.py
+│   │   │   ├── creepy_resources_rc.py
+│   │   │   ├── creepyai_gui.py
+│   │   │   ├── gui_preview.py
+│   │   │   ├── icon_loader.py
+│   │   │   ├── plugin_dialog_fix.py
+│   │   │   ├── pyqt5_ui.py
+│   │   │   ├── ui_template.py
+│   │   │   └── update_check_dialog.py
+│   │   ├── map_resources
+│   │   ├── resources
+│   │   │   ├── aboutDialog_ai25.ui
+│   │   │   ├── about_dialog.ui
+│   │   │   ├── creepyai25.ui
+│   │   │   ├── exportDirDialog_ai25.ui
+│   │   │   ├── filterLocationsDateDialog_ai25.ui
+│   │   │   ├── filterLocationsPointDialog_ai25.ui
+│   │   │   ├── personProjectWizard_ai25.ui
+│   │   │   ├── personProject_ai25.ui
+│   │   │   ├── pluginConfigCheckDialog_ai25.ui
+│   │   │   ├── pluginImportWizard_ai25.ui
+│   │   │   ├── plugin_config_dialog.ui
+│   │   │   ├── pluginsConfig_ai25.ui
+│   │   │   ├── settings_dialog.ui
+│   │   │   ├── updateCheckDialog.ui
+│   │   │   └── verifyDeleteDialog.ui
+│   │   ├── ui
+│   │   │   ├── __init__.py
+│   │   │   ├── about_dialog.py
+│   │   │   ├── plugin_config_dialog.py
+│   │   │   └── settings_dialog.py
+│   │   ├── updateCheckDialog.ui
+│   │   ├── utils
+│   │   ├── verifyDeleteDialog.ui
+│   │   ├── widgets
+│   │   └── wizards
+│   │       ├── PersonProjectWizard.py
+│   │       └── __init__.py
+│   ├── include
+│   │   ├── __init__.py
+│   │   ├── creepy_resources.qrc
+│   │   ├── export_template.html
+│   │   ├── kml_template.xml
+│   │   ├── map.html
+│   │   ├── mapSetPoint.html
+│   │   └── style.qss
+│   ├── models
+│   │   ├── Database.py
+│   │   ├── InputPlugin.py
+│   │   ├── InputPlugin.py.import_backup
+│   │   ├── Location.py
+│   │   ├── LocationsList.py
+│   │   ├── PluginConfigurationListModel.py
+│   │   ├── PluginManager.py
+│   │   ├── Project.py
+│   │   ├── ProjectTree.py
+│   │   ├── ProjectWizardPluginListModel.py
+│   │   ├── ProjectWizardPossibleTargetsTable.py
+│   │   ├── ProjectWizardSelectedTargetsTable.py
+│   │   ├── README.md
+│   │   ├── ScrapingPlugin.py
+│   │   ├── __init__.py
+│   │   └── config
+│   │       └── model_config.yaml
+│   ├── others
+│   │   ├── __init__.py
+│   │   └── main_window.py
+│   ├── reorganize_src.sh
+│   └── styles
+│       ├── __init__.py
+│       └── map-icons.css
+├── temp
+│   └── __init__.py
+├── tests
+│   ├── __init__.py
+│   ├── test_basic.py
+│   └── test_ui.py
+├── tools
+│   ├── build
+│   │   └── build_creepyai.py
+│   ├── cleanup
+│   │   ├── clean_pycache.py
+│   │   ├── cleanup.py
+│   │   ├── cleanup_project.py
+│   │   └── clear_pycache.sh
+│   ├── documentation
+│   │   ├── PLUGIN_TROUBLESHOOTING.md
+│   │   ├── README.md
+│   │   └── commands.txt
+│   ├── environment
+│   │   ├── debug_environment.py
+│   │   ├── diagnose_conda.py
+│   │   ├── diagnostic.py
+│   │   ├── env_info.py
+│   │   ├── setup_environment.sh
+│   │   └── test_environment.py
+│   ├── health_check.py
+│   ├── misc
+│   │   ├── __init__.py
+│   │   ├── fix_imports.py.import_backup
+│   │   ├── gui_preview.py
+│   │   └── test_plugins.py.import_backup
+│   ├── plugin_management
+│   │   ├── plugin_creator.py
+│   │   ├── plugin_fixer.py
+│   │   ├── plugin_health.py
+│   │   ├── plugin_registry.py
+│   │   ├── plugin_test.py
+│   │   ├── plugin_utils.py
+│   │   └── plugin_validator.py
+│   ├── runners
+│   │   ├── creepyai_cli.py
+│   │   ├── debug_runner.py
+│   │   ├── run_creepyai.py
+│   │   ├── run_creepyai.sh
+│   │   ├── run_plugin_cli.py
+│   │   └── run_tkinter_ui.sh
+│   ├── setup.py
+│   ├── testing
+│   │   ├── test_plugins.py
+│   │   ├── test_qt.py
+│   │   └── test_ui.py
+│   └── utilities
+│       ├── benchmark_plugins.py
+│       ├── data_analysis.py
+│       ├── export_locations.py
+│       ├── git_manager.py
+│       ├── merge_ui_folders.py
+│       ├── reorganize_configs.py
+│       ├── setup_tools.py
+│       └── update_exports.py
+├── ui
+│   └── components
+└── utilities
+    ├── ExportUtils.py
+    ├── GeneralUtilities.py
+    ├── GeocodingUtility.py
+    ├── Initialization.py
+    ├── PluginIntegration.py
+    ├── PluginManager.py
+    ├── ResourceLoader.py
+    ├── WebScrapingUtility.py
+    ├── __init__.py
+    ├── __pycache__
+    │   ├── __init__.cpython-311.pyc
+    │   └── webengine_compat.cpython-311.pyc
+    ├── create_app_icon.py
+    ├── create_missing_icons.py
+    ├── error_handling.py
+    ├── gui_compatibility.py
+    ├── icon_mapping.py
+    ├── icon_path_fix.py
+    ├── icon_path_fix.py.import_backup
+    ├── icons.py
+    ├── location_clustering.py
+    └── webengine_compat.py
+
+82 directories, 490 files
+(creepyai25ENV) mbaosint@Mac CreepyAI % 

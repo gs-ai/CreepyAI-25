@@ -1,0 +1,25 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <!-- Application icons -->
+    <qresource prefix="/icons">
+        <file alias="app_icon.png">icons/app_icon.png</file>
+        <file alias="new.png">icons/new.png</file>
+        <file alias="open.png">icons/open.png</file>
+        <file alias="save.png">icons/save.png</file>
+        <file alias="settings.png">icons/settings.png</file>
+    </qresource>
+    
+    <!-- Application styles -->
+    <qresource prefix="/styles">
+        <file>styles/dark.qss</file>
+        <file>styles/light.qss</file>
+        <file>styles/base.qss</file>
+    </qresource>
+    
+    <!-- UI templates -->
+    <qresource prefix="/ui">
+        <file>ui/plugin_config_dialog.ui</file>
+        <file>ui/settings_dialog.ui</file>
+        <file>ui/about_dialog.ui</file>
+    </qresource>
+</RCC>

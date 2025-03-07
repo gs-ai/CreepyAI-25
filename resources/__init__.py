@@ -1,0 +1,3 @@
+"""
+CreepyAI Resources Package
+"""

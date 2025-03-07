@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "standard": {
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    },
+    "detailed": {
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s"
+    },
+    "simple": {
+      "format": "%(levelname)s - %(message)s"
+    }
+  },
+  "handlers": {
+    "console": {
+      "class": "logging.StreamHandler",
+      "level": "INFO",
+      "formatter": "standard",
+      "stream": "ext://sys.stdout"
+    },
+    "file": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "DEBUG",
+      "formatter": "detailed",
+      "filename": "/Users/mbaosint/Desktop/Projects/CreepyAI/logs/creepyai_plugins.log",
+      "maxBytes": 10485760,
+      "backupCount": 5
+    },
+    "error_file": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "ERROR",
+      "formatter": "detailed",
+      "filename": "/Users/mbaosint/Desktop/Projects/CreepyAI/logs/creepyai_errors.log",
+      "maxBytes": 10485760,
+      "backupCount": 5
+    }
+  },
+  "loggers": {
+    "": {
+      "handlers": ["console", "file", "error_file"],
+      "level": "DEBUG",
+      "propagate": true
+    },
+    "plugins": {
+      "level": "DEBUG"
+    },
+    "plugins.metadata_extractor": {
+      "level": "DEBUG"
+    },
+    "plugins.facebook_plugin": {
+      "level": "DEBUG"
+    },
+    "plugins.enhanced_geocoding_helper": {
+      "level": "INFO"
+    },
+    "plugins.plugin_registry": {
+      "level": "INFO"
+    },
+    "plugins.file_system_watcher": {
+      "level": "DEBUG"
+    },
+    "urllib3": {
+      "level": "WARNING"
+    },
+    "requests": {
+      "level": "WARNING"
+    }
+  }
+}

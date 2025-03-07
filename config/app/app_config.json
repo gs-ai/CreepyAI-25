@@ -1,0 +1,48 @@
+{
+    "app_name": "CreepyAI",
+    "version": "2.5.0",
+    "data_directory": "projects",
+    "temp_directory": "~/.creepyai/temp",
+    "cache_directory": "~/.creepyai/cache",
+    "max_threads": 4,
+    "ui": {
+        "default_theme": "system",
+        "themes": ["light", "dark", "system"],
+        "font_size": 12,
+        "map_provider": "leaflet",
+        "show_splash": true,
+        "auto_check_updates": true
+    },
+    "network": {
+        "timeout": 30,
+        "retries": 3,
+        "user_agent": "CreepyAI/1.0",
+        "enable_proxy": false,
+        "proxy_url": ""
+    },
+    "plugins": {
+        "config_file": "config/plugins/plugins.yaml",
+        "enabled": true,
+        "auto_update": false
+    },
+    "privacy": {
+        "anonymize_results": false,
+        "clear_cache_on_exit": false
+    },
+    "performance": {
+        "max_locations_per_query": 5000,
+        "location_batch_size": 100,
+        "enable_caching": true,
+        "cache_ttl": 86400
+    },
+    "last_update_check": null,
+    "check_for_updates": true,
+    "theme": "light",
+    "debug_mode": false,
+    "log_level": "INFO",
+    "export_formats": ["kml", "csv", "json"],
+    "max_locations": 1000,
+    "auto_save": true,
+    "auto_save_interval": 300,
+    "session_timeout": 1800
+}

@@ -1,13 +1,26 @@
-name: creepyai25ENV
+name: creepyai
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
-  - python=3.8
+  - python=3.9
+  - pyqt=5.15
+  - pyqtwebengine=5.15
   - pip
   - pip:
-    - PyQt5
-    - PyQt5-WebKit  # PyQtWebKit replacement
-    - yapsy
-    - configobj
-    - Pillow
+    - yapsy>=1.12.2
+    - configobj>=5.0.6
+    - tqdm>=4.60.0
+    - geopy>=2.1.0
+    - folium>=0.12.0
+    - python-dateutil>=2.8.2
+    - pillow>=9.0.0
+    - beautifulsoup4>=4.10.0
+    - lxml>=4.8.0
+    - colorama>=0.4.4
+    - pandas>=1.2.0
+    - numpy>=1.20.0
+    - matplotlib>=3.3.0
+    - pytest>=6.2.0
+    - ollama==0.1.5
+    - python-dotenv==1.0.0

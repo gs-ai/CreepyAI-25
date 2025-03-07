@@ -1,9 +1,0 @@
-[Core]
-Name = Google Maps Plugin
-Module = google_maps
-
-[Documentation]
-Author = Your Name
-Version = 0.1
-Website = https://www.geocreepy.net
-Description = Retrieves geo-locations from Google Maps with enhanced error handling and logging.

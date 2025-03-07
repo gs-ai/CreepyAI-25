@@ -1,9 +1,0 @@
-[Core]
-Name = Foursquare Plugin
-Module = foursquare
-
-[Documentation]
-Author = Ioannis Kakavas
-Version = 0.1
-Website = https://www.geocreepy.net
-Description = Retrieves geo-locations from a user's Foursquare check-ins with enhanced error handling and logging.

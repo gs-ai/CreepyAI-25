@@ -1,7 +1,0 @@
-[labels]
-app_id = Pinterest App ID
-app_secret = Pinterest App Secret
-redirect_uri = OAuth Redirect URI
-access_token = Pinterest Access Token
-use_cache = Cache Results
-infowindow_html = HTML for Infowindow on map

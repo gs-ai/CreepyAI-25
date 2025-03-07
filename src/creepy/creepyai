@@ -1,0 +1,13 @@
+#!/bin/bash
+# Quick launcher script for CreepyAI
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run the CLI tool
+PYTHON="python3"
+if ! command -v $PYTHON &>/dev/null; then
+    PYTHON="python"
+fi
+
+$PYTHON "$SCRIPT_DIR/tools/creepyai_cli.py" "$@"

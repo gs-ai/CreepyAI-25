@@ -1,64 +1,47 @@
 # Core dependencies
-<<<<<<< HEAD
 PyQt5>=5.15.0
-PyQt5-WebEngine>=5.15.0
-requests>=2.26.0
-beautifulsoup4>=4.10.0
-yapsy>=1.12.0
-folium>=0.12.1
-Pillow>=8.3.2
-geopy>=2.2.0
+PyQtWebEngine>=5.15.0
+pyyaml>=5.1.0
+psutil>=5.8.0
+requests>=2.27.0
+geopy>=2.1.0
+folium>=0.12.0
 python-dateutil>=2.8.2
-
-# Optional dependencies
-simplekml>=1.3.0
-matplotlib>=3.3.0
-pandas>=1.1.0
-
-# Development dependencies
-pytest>=6.0.0
-black>=21.5b0
-pylint>=2.8.0
-piexif>=1.1.3
-lxml>=4.6.3
-=======
-yapsy==1.12.2
-configobj==5.0.9
-requests==2.32.2
-beautifulsoup4==4.11.1
-numpy==1.23.3
-scikit-learn==1.5.1
-python-dateutil==2.8.2
-Pillow==10.3.0
-
-# Web scraping and API tools
-lxml==4.9.1
-html5lib==1.1
-pyquery==1.4.3
-fake-useragent==0.1.11
-
-# Geolocation specific libraries
-geopy==2.2.0
-folium==0.12.1
-gpxpy==1.5.0
+pillow>=9.0.0
+beautifulsoup4>=4.10.0
+lxml>=4.8.0
+colorama>=0.4.4
 
 # Data processing
-pandas==1.5.0
-matplotlib==3.6.0
-seaborn==0.12.0
+pandas>=1.2.0
+numpy>=1.20.0
+matplotlib>=3.3.0
 
-# GUI dependencies - these should be installed with conda
-# conda install -c conda-forge pyqt=5.15
-# conda install -c conda-forge pyqtwebkit
+# For geocoding
+geopy>=2.1.0
+googlemaps>=4.4.0
 
-# Development tools
-pytest==7.1.3
-black==24.3.0
-flake8==5.0.4
-mypy==0.971
-isort==5.10.1
+# Testing
+pytest>=6.2.0
+pytest-cov>=2.11.0
 
 # Documentation
-sphinx==5.2.3
-sphinx-rtd-theme==1.0.0
->>>>>>> gs-ai-patch-1
+sphinx>=3.5.0
+sphinx-rtd-theme>=0.5.1
+
+# Additional dependencies
+ollama==0.1.5  # Python client for Ollama API
+python-dotenv==1.0.0  # For environment variable management
+
+# Optional dependencies
+# Uncomment as needed
+# matplotlib>=3.5.1
+# networkx>=2.7.1
+# pandas>=1.4.1
+# openpyxl>=3.0.9
+
+# New dependencies
+yapsy>=1.12.2
+configobj>=5.0.6
+tqdm>=4.60.0
+PyInstaller>=4.5.0; python_version >= '3.6'

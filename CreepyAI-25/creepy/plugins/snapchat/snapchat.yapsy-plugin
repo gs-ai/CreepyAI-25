@@ -1,9 +1,0 @@
-[Core]
-Name = Snapchat Plugin
-Module = snapchat
-
-[Documentation]
-Author = CreepyAI Team
-Version = 1.0
-Website = https://creepyai.example.com
-Description = Extract location data from Snapchat memories and public Snap Map content

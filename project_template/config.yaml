@@ -1,0 +1,51 @@
+# CreepyAI Project Configuration
+
+name: Untitled Project
+created: 2025-03-06
+version: 1.0
+
+# Project settings
+settings:
+  map_center: [0.0, 0.0]
+  map_zoom: 3
+  time_zone: UTC
+  date_format: "%Y-%m-%d %H:%M:%S"
+  
+# Data sources
+sources:
+  - name: OpenStreetMap
+    type: map_provider
+    enabled: true
+    
+  - name: Twitter
+    type: social_media
+    enabled: false
+    
+  - name: Instagram
+    type: social_media
+    enabled: false
+    
+  - name: Reddit
+    type: social_media
+    enabled: false
+
+# Analysis settings
+analysis:
+  clustering:
+    enabled: true
+    algorithm: DBSCAN
+    min_samples: 3
+    eps: 0.1
+  
+  heatmap:
+    enabled: true
+    radius: 25
+    blur: 15
+    
+# Export options
+export:
+  formats:
+    - csv
+    - json
+    - kml
+    - pdf

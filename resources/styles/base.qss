@@ -1,0 +1,72 @@
+/* Base styles for CreepyAI - shared between themes */
+
+/* Common spacing and sizing */
+QWidget {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 12px;
+}
+
+QMainWindow {
+    padding: 0;
+    margin: 0;
+}
+
+/* Common button behaviors */
+QPushButton {
+    min-width: 80px;
+    min-height: 24px;
+}
+
+QPushButton:disabled {
+    opacity: 0.6;
+}
+
+/* Form layout spacing */
+QFormLayout {
+    spacing: 10px;
+}
+
+/* Table styles */
+QTableView {
+    gridline-color: #cccccc;
+    selection-background-color: #3a7abb;
+    selection-color: #ffffff;
+}
+
+QHeaderView::section {
+    padding: 4px;
+    background-color: #e0e0e0;
+    border: 1px solid #cccccc;
+    font-weight: bold;
+}
+
+/* Common dialog button box */
+QDialogButtonBox {
+    button-layout: 2;
+}
+
+/* Status bar permanent items */
+QStatusBar::item {
+    border: none;
+}
+
+/* Progress bar */
+QProgressBar {
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background-color: #3a7abb;
+    width: 10px;
+    margin: 0.5px;
+}
+
+/* Tool tip */
+QToolTip {
+    border: 1px solid #cccccc;
+    padding: 4px;
+    border-radius: 2px;
+    opacity: 220;
+}

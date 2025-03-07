@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Location</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .coordinates-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        .help-text {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="coordinates-display" id="coordinates">Click on the map to select a location</div>
+    <div class="help-text" id="help-text">Click anywhere on the map to set the center point for filtering. You can drag the marker to adjust the position.</div>
+    
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([0, 0], 2);
+        
+        // Add base layers
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        }).addTo(map);
+        
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        // Base layers control
+        var baseLayers = {
+            "OpenStreetMap": osmLayer,
+            "Satellite": satelliteLayer
+        };
+        
+        L.control.layers(baseLayers).addTo(map);
+        
+        // Try to get user's location to center the map
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                map.setView([lat, lng], 12);
+            }, function(error) {
+                console.log("Error getting location: " + error.message);
+            });
+        }
+        
+        // Variables to store current marker and circle
+        var marker = null;
+        var circle = null;
+        
+        // Update coordinates display
+        function updateCoordinatesDisplay(lat, lng) {
+            document.getElementById('coordinates').innerHTML = 
+                'Latitude: ' + lat.toFixed(6) + '<br>' +
+                'Longitude: ' + lng.toFixed(6);
+        }
+        
+        // Send coordinates to Python
+        function sendCoordinatesToPython(lat, lng) {
+            try {
+                myPyObj.setCoordinates(lat, lng);
+                console.log("Sent coordinates to Python: " + lat + ", " + lng);
+            } catch (e) {
+                console.log("Error sending coordinates to Python: " + e);
+            }
+        }
+        
+        // Handle map click event
+        map.on('click', function(e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+            
+            // Remove previous marker and circle if they exist
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            
+            // Create a new marker at the clicked location
+            marker = L.marker([lat, lng], {draggable: true}).addTo(map);
+            
+            // Update coordinates display
+            updateCoordinatesDisplay(lat, lng);
+            
+            // Send coordinates to Python
+            sendCoordinatesToPython(lat, lng);
+            
+            // Handle marker drag event
+            marker.on('dragend', function(e) {
+                var newLat = e.target._latlng.lat;
+                var newLng = e.target._latlng.lng;
+                
+                updateCoordinatesDisplay(newLat, newLng);
+                sendCoordinatesToPython(newLat, newLng);
+            });
+            
+            // Hide help text after first click
+            document.getElementById('help-text').style.display = 'none';
+        });
+    </script>
+</body>
+</html>

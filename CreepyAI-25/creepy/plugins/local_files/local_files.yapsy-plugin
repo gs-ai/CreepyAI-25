@@ -1,9 +1,0 @@
-[Core]
-Name = Local Files Plugin
-Module = local_files
-
-[Documentation]
-Author = CreepyAI Project
-Version = 1.0
-Website = https://geocreepy.com
-Description = Extract geolocation data from EXIF metadata in local image files

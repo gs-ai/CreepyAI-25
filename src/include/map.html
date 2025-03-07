@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CreepyAI Map</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script> <!-- Add this line to include QWebChannel -->
+    <style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        console.log("Map HTML loaded");  // Debug message to verify HTML loading
+
+        // Initialize map
+        var map = L.map('map').setView([0, 0], 2);
+        
+        // Add base layers
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        }).addTo(map);
+        
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        // Base layers control
+        var baseLayers = {
+            "OpenStreetMap": osmLayer,
+            "Satellite": satelliteLayer
+        };
+        
+        L.control.layers(baseLayers).addTo(map);
+        
+        // Storage for markers
+        var markers = [];
+        var heatData = [];
+        var heatmap = null;
+        
+        // Function to add a marker
+        function addMarker(lat, lon, popupContent) {
+            var marker = L.marker([lat, lon]).addTo(map);
+            if (popupContent) {
+                marker.bindPopup(popupContent);
+            }
+            markers.push(marker);
+            heatData.push([lat, lon, 1]);
+            
+            // Update heatmap if enabled
+            if (heatmap && map.hasLayer(heatmap)) {
+                heatmap.setLatLngs(heatData);
+            }
+            
+            return marker;
+        }
+        
+        // Center map on a location
+        function centerMap(lat, lon) {
+            map.panTo(new L.LatLng(lat, lon));
+        }
+        
+        // Set zoom level
+        function setZoom(level) {
+            map.setZoom(level);
+        }
+        
+        // Clear markers
+        function clearMarkers() {
+            for (var i = 0; i < markers.length; i++) {
+                map.removeLayer(markers[i]);
+            }
+            markers = [];
+            heatData = [];
+            if (heatmap) {
+                heatmap.setLatLngs([]);
+            }
+        }
+        
+        // Hide markers
+        function hideMarkers() {
+            for (var i = 0; i < markers.length; i++) {
+                map.removeLayer(markers[i]);
+            }
+        }
+        
+        // Show markers
+        function showMarkers() {
+            for (var i = 0; i < markers.length; i++) {
+                markers[i].addTo(map);
+            }
+        }
+        
+        // Show heatmap
+        function showHeatmap() {
+            if (!heatmap) {
+                heatmap = L.heatLayer(heatData, {radius: 25}).addTo(map);
+            } else {
+                heatmap.addTo(map);
+            }
+        }
+        
+        // Hide heatmap
+        function hideHeatmap() {
+            if (heatmap) {
+                map.removeLayer(heatmap);
+            }
+        }
+        
+        // Function to communicate back to Python
+        function sendToPython(message) {
+            if (typeof window.bridge !== 'undefined') {
+                // Use modern QtWebChannel approach
+                window.bridge.setData('message', message);
+            } else {
+                // Try to use the PyQt5 WebKit approach (deprecated)
+                try {
+                    myPyObj.receiveMessage(message);
+                } catch (e) {
+                    console.log("Error sending to Python: " + e);
+                }
+            }
+        }
+
+        // Function to fit map to markers
+        function fitMapToMarkers() {
+            if (markers.length === 0) {
+                return;
+            }
+            
+            var bounds = new google.maps.LatLngBounds();
+            
+            for (var i = 0; i < markers.length; i++) {
+                bounds.extend(markers[i].getPosition());
+            }
+            
+            map.fitBounds(bounds);
+            
+            // If zoom is too high (when there are only a few markers close together)
+            var listener = google.maps.event.addListener(map, "idle", function() { 
+                if (map.getZoom() > 16) map.setZoom(16); 
+                google.maps.event.removeListener(listener); 
+            });
+        }
+    </script>
+</body>
+</html>

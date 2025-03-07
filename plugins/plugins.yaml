@@ -1,0 +1,105 @@
+# CreepyAI Plugin Configuration and Metadata
+
+version: 1.0.0
+update_url: https://api.creepyai.com/plugins/latest
+plugin_registry: https://registry.creepyai.com
+
+settings:
+  auto_discover: true
+  verify_signatures: false
+  allow_remote_plugins: false
+  max_threads_per_plugin: 4
+  plugin_timeout: 120
+  enable_plugin_logging: true
+  cache_ttl: 86400
+  default_user_agent: "CreepyAI/1.0 Plugin System"
+
+plugin_categories:
+  - social_media
+  - location_services
+  - file_analysis
+  - device_scanners
+  - network_tools
+  - online_search
+  - data_import
+  - personal_exports
+  - apis
+
+default_permissions:
+  file_access: false
+  network_access: false
+  device_info_access: false
+  run_commands: false
+  use_credentials: false
+  access_sensors: false
+  background_execution: false
+
+plugins:
+  facebook_plugin:
+    enabled: true
+    permissions:
+      file_access: true
+    priority: 10
+    
+  twitter_plugin:
+    enabled: true
+    permissions:
+      network_access: true
+      use_credentials: true
+    priority: 20
+    
+  instagram_plugin:
+    enabled: true
+    permissions:
+      network_access: true
+      use_credentials: true
+    priority: 20
+    
+  metadata_extractor:
+    enabled: true
+    permissions:
+      file_access: true
+    priority: 30
+    
+  google_takeout_plugin:
+    enabled: true
+    permissions:
+      file_access: true
+    priority: 20
+    
+  wifi_mapper_plugin:
+    enabled: false
+    permissions:
+      network_access: true
+      device_info_access: true
+      access_sensors: true
+    priority: 5
+    
+  file_system_watcher:
+    enabled: true
+    permissions:
+      file_access: true
+      background_execution: true
+    priority: 15
+    
+  enhanced_geocoding_helper:
+    enabled: true
+    permissions:
+      network_access: true
+    priority: 50
+
+hooks:
+  on_startup:
+    - plugin_registry.initialize
+    - file_system_watcher.start
+  
+  on_shutdown:
+    - plugin_data_manager.cleanup
+    - file_system_watcher.stop
+  
+  on_new_target:
+    - plugin_registry.notify_new_target
+  
+  on_location_found:
+    - plugin_registry.process_location
+    - plugin_data_manager.store_locations

@@ -1,0 +1,52 @@
+# CreepyAI Model Configuration
+
+# Clustering models
+clustering_models:
+  - name: "dbscan_geo"
+    type: "DBSCAN"
+    file: "clustering/dbscan_geo_model.pkl"
+    parameters:
+      eps: 0.01
+      min_samples: 3
+    metadata:
+      description: "DBSCAN algorithm for geographical clustering"
+      created_at: "2025-03-06"
+      version: "1.0"
+  
+  - name: "kmeans_activity"
+    type: "KMeans"
+    file: "clustering/kmeans_activity_model.pkl"
+    parameters:
+      n_clusters: 5
+      random_state: 42
+    metadata:
+      description: "K-Means clustering for activity patterns"
+      created_at: "2025-03-06"
+      version: "1.0"
+
+# Classification models
+classification_models:
+  - name: "location_classifier"
+    type: "RandomForest"
+    file: "classification/location_classifier.pkl"
+    parameters:
+      n_estimators: 100
+      max_depth: 10
+    metadata:
+      description: "Random Forest classifier for location types"
+      created_at: "2025-03-06"
+      version: "1.0"
+
+# Embedding models
+embedding_models:
+  - name: "location_embeddings"
+    type: "Word2Vec"
+    file: "embeddings/location_embeddings.bin"
+    parameters:
+      vector_size: 100
+      window: 5
+      min_count: 1
+    metadata:
+      description: "Word2Vec model for location name embeddings"
+      created_at: "2025-03-06"
+      version: "1.0"

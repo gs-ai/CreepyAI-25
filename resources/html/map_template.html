@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CreepyAI Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .info-window {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .info-window h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 20px;
+        }
+        .marker-cluster div {
+            width: 30px;
+            height: 30px;
+            margin-left: 5px;
+            margin-top: 5px;
+            text-align: center;
+            border-radius: 15px;
+            font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        }
+        .marker-cluster span {
+            line-height: 30px;
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([0, 0], 2);
+        
+        // Add tile layer
+        var baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Create marker cluster group
+        var markers = L.markerClusterGroup();
+        map.addLayer(markers);
+        
+        // Marker array for tracking
+        var markerArray = [];
+        
+        // Heatmap layer
+        var heatmapData = [];
+        var heatLayer = null;
+        
+        function addMarker(lat, lng, name, popupContent) {
+            var marker = L.marker([lat, lng]);
+            if (popupContent) {
+                marker.bindPopup(popupContent);
+            } else {
+                marker.bindPopup(name);
+            }
+            markers.addLayer(marker);
+            
+            var markerInfo = {
+                id: markerArray.length,
+                lat: lat,
+                lng: lng,
+                name: name
+            };
+            markerArray.push(markerInfo);
+            
+            // Add to heatmap data
+            heatmapData.push([lat, lng, 0.5]);
+            updateHeatmap();
+            
+            // Notify Python
+            if (window.pybridge) {
+                window.pybridge.on_markers_updated(JSON.stringify(markerArray));
+            }
+            
+            return marker;
+        }
+        
+        function clearMarkers() {
+            markers.clearLayers();
+            markerArray = [];
+            heatmapData = [];
+            updateHeatmap();
+            
+            // Notify Python
+            if (window.pybridge) {
+                window.pybridge.on_markers_updated(JSON.stringify(markerArray));
+            }
+        }
+        
+        function updateHeatmap() {
+            if (heatLayer) {
+                map.removeLayer(heatLayer);
+            }
+            heatLayer = L.heatLayer(heatmapData, {radius: 25}).addTo(map);
+        }
+        
+        function toggleHeatmap(visible) {
+            if (visible && heatLayer) {
+                if (!map.hasLayer(heatLayer)) {
+                    map.addLayer(heatLayer);
+                }
+            } else {
+                if (heatLayer && map.hasLayer(heatLayer)) {
+                    map.removeLayer(heatLayer);
+                }
+            }
+        }
+        
+        function showMarkersInTimeRange(startTime, endTime) {
+            markers.clearLayers();
+            
+            var visibleMarkers = markerArray.filter(function(marker) {
+                return marker.timestamp >= startTime && marker.timestamp <= endTime;
+            });
+            
+            visibleMarkers.forEach(function(markerInfo) {
+                var marker = L.marker([markerInfo.lat, markerInfo.lng]);
+                marker.bindPopup(markerInfo.name);
+                markers.addLayer(marker);
+            });
+        }
+        
+        // Map click event
+        map.on('click', function(e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+            var name = "Selected Location";
+            
+            // Notify Python
+            if (window.pybridge) {
+                window.pybridge.on_location_selected(lat, lng, name);
+            }
+        });
+        
+        // Base layer options
+        var baseLayers = {
+            "OpenStreetMap": baseLayer,
+            "Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }),
+            "Topo": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+            })
+        };
+        
+        // Overlay layers
+        var overlays = {
+            "Markers": markers,
+            "Heatmap": heatLayer
+        };
+        
+        // Layer control
+        L.control.layers(baseLayers, overlays).addTo(map);
+    </script>
+</body>
+</html>

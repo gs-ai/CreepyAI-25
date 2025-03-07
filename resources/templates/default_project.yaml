@@ -1,0 +1,50 @@
+# Default CreepyAI Project Template
+
+name: "Untitled Project"
+created_at: "AUTO_DATE"  # Will be replaced with actual date on creation
+version: "1.0"
+
+# Project metadata
+metadata:
+  author: ""
+  description: ""
+  tags: []
+  
+# Data sources configuration
+sources:
+  - name: "OpenStreetMap"
+    type: "map"
+    enabled: true
+    config: {}
+  
+  - name: "Social Media"
+    type: "social"
+    enabled: false
+    config:
+      platforms: ["twitter", "instagram", "facebook"]
+      
+# Analysis settings
+analysis:
+  clustering:
+    enabled: true
+    algorithm: "DBSCAN"
+    parameters:
+      eps: 0.01
+      min_samples: 3
+      
+  heatmap:
+    enabled: true
+    parameters:
+      radius: 25
+      intensity: 0.7
+      
+  timeline:
+    enabled: true
+    parameters:
+      group_by: "day"
+      
+# Map settings
+map:
+  default_center: [0.0, 0.0]
+  default_zoom: 3
+  default_type: "street"
