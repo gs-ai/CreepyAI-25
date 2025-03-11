@@ -1,41 +1,28 @@
 # CreepyAI Resources
 
-This directory contains all resource files used by CreepyAI.
+This directory contains static resources used by the CreepyAI application.
 
 ## Directory Structure
 
-- `icons/` - Application icons and images
-- `styles/` - QSS style files for theming
-- `ui/` - Qt Designer UI files
-- `templates/` - Template files for new projects
-- `data/` - Default database and configuration templates
+- `assets/` - Static assets like images, icons, etc.
+  - `images/` - General images used in the application
+  - `icons/` - Application and UI icons
+  - `sounds/` - Audio files and alert sounds
+- `templates/` - Template files for generating content
+  - `plugins/` - Templates for creating new plugins
+  - `projects/` - Templates for creating new projects
+  - `reports/` - Templates for report generation
+- `docs/` - Documentation resources
+- `samples/` - Sample data files and examples
 
-## Compiling Resources
+## Usage
 
-Resource files need to be compiled before they can be used by the application:
+Resources can be accessed in the application using the resource manager:
 
-1. Compile Qt Resources:
-   ```bash
-   pyrcc5 -o resources/creepy_resources_rc.py resources/creepy_resources.qrc
-   ```
+```python
+from app.utils.resource_manager import ResourceManager
 
-2. Compile UI Files:
-   ```bash
-   python compile_ui.py
-   ```
-
-## Adding New Resources
-
-When adding new resources:
-
-1. Add the file to the appropriate subdirectory
-2. Update the `creepy_resources.qrc` file to include the new resource
-3. Recompile the resources
-
-## Theme Files
-
-The application supports multiple themes through QSS stylesheets:
-
-- `styles/base.qss` - Common styling used by all themes
-- `styles/dark.qss` - Dark theme
-- `styles/light.qss` - Light theme
+# Get a resource file path
+resource_manager = ResourceManager()
+image_path = resource_manager.get_resource_path('assets/images/logo.png')
+```

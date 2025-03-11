@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Set Location Point</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        .coordinates-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+        .help-text {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .marker-icon {
+            border-radius: 50%;
+            border: 2px solid white;
+            background-color: #4a86e8;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        /* Dark mode support */
+        .dark-mode {
+            filter: invert(90%) hue-rotate(180deg);
+        }
+        .dark-mode .leaflet-tile {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+        .dark-mode .marker-icon,
+        .dark-mode .coordinates-display,
+        .dark-mode .help-text {
+            filter: invert(100%) hue-rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="coordinates-display" id="coordinates">Click to set location point</div>
+    <div class="help-text">Click anywhere on the map to set a location point</div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([0, 0], 2);
+        
+        // Available map layers
+        const layers = {
+            'Street Map': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }),
+            'Terrain': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+            }),
+            'Dark Mode': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            })
+        };
+        
+        // Add default layer
+        layers['Street Map'].addTo(map);
+        
+        // Add layer control
+        L.control.layers(layers).addTo(map);
+        
+        // Create marker variable
+        let marker = null;
+        let currentLat = null;
+        let currentLng = null;
+        
+        // Custom marker icon
+        const markerIcon = L.divIcon({
+            className: 'marker-icon',
+            iconSize: [20, 20]
+        });
+        
+        // Handle map click
+        map.on('click', function(e) {
+            currentLat = e.latlng.lat;
+            currentLng = e.latlng.lng;
+            
+            updateCoordinatesDisplay();
+            
+            // Remove existing marker and add new one
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            
+            marker = L.marker([currentLat, currentLng], {
+                icon: markerIcon,
+                draggable: true
+            }).addTo(map);
+            
+            // Update coordinates when marker is dragged
+            marker.on('dragend', function(event) {
+                const position = marker.getLatLng();
+                currentLat = position.lat;
+                currentLng = position.lng;
+                updateCoordinatesDisplay();
+            });
+            
+            // Send coordinates to Python
+            if (window.pywebview !== undefined) {
+                window.pywebview.api.set_coordinates(currentLat, currentLng);
+            }
+        });
+        
+        // Update coordinates display
+        function updateCoordinatesDisplay() {
+            document.getElementById('coordinates').textContent = 
+                `Latitude: ${currentLat ? currentLat.toFixed(6) : ''}, Longitude: ${currentLng ? currentLng.toFixed(6) : ''}`;
+        }
+        
+        // Function to toggle dark mode
+        function toggleDarkMode(enabled) {
+            document.body.classList.toggle('dark-mode', enabled);
+        }
+        
+        // Function to set marker position
+        function setMarkerPosition(lat, lng) {
+            currentLat = lat;
+            currentLng = lng;
+            updateCoordinatesDisplay();
+            
+            // Remove existing marker and add new one
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            
+            marker = L.marker([currentLat, currentLng], {
+                icon: markerIcon,
+                draggable: true
+            }).addTo(map);
+            
+            // Center map on the marker
+            map.setView([currentLat, currentLng], 14);
+        }
+        
+        // Initialize with location if provided by Python
+        function initializeLocation(lat, lng) {
+            if (lat && lng) {
+                setMarkerPosition(lat, lng);
+            } else {
+                // Try to get user's location
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            map.setView([position.coords.latitude, position.coords.longitude], 12);
+                        },
+                        function(error) {
+                            console.log('Error getting user location:', error);
+                        }
+                    );
+                }
+            }
+        }
+        
+        // Expose API for Python
+        window.setPointMap = {
+            setMarkerPosition,
+            toggleDarkMode,
+            initializeLocation,
+            getCoordinates: function() {
+                return { lat: currentLat, lng: currentLng };
+            }
+        };
+    </script>
+</body>
+</html>

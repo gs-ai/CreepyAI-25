@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CreepyAI - Exported Data</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2196F3;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #333;
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #777;
+            font-size: 0.8em;
+        }
+        #mapContainer {
+            height: 500px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+        }
+        .info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>CreepyAI - Exported Data</h1>
+        
+        <div class="info">
+            <p>
+                <strong>Project:</strong> ${project_name}<br>
+                <strong>Date:</strong> ${export_date}<br>
+                <strong>Total Items:</strong> ${total_items}
+            </p>
+        </div>
+        
+        <h2>Location Data</h2>
+        <div id="mapContainer"></div>
+        
+        <h2>Detailed Information</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${table_rows}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            Generated with CreepyAI v${version} on ${export_date}
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            var map = L.map('mapContainer').setView([0, 0], 2);
+            
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Parse location data and add markers
+            try {
+                const locationData = ${location_data_json};
+                if (locationData && locationData.length > 0) {
+                    const bounds = L.latLngBounds();
+                    
+                    locationData.forEach(location => {
+                        if (location.latitude && location.longitude) {
+                            const marker = L.marker([location.latitude, location.longitude]).addTo(map);
+                            const popupContent = `
+                                <b>${location.source || 'Unknown'}</b><br>
+                                Date: ${new Date(location.timestamp).toLocaleString()}<br>
+                                Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}
+                                ${location.context ? '<br>' + location.context : ''}
+                            `;
+                            marker.bindPopup(popupContent);
+                            bounds.extend([location.latitude, location.longitude]);
+                        }
+                    });
+                    
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading location data:", e);
+            }
+        });
+    </script>
+</body>
+</html>

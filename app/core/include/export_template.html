@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CreepyAI Location Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            line-height: 1.5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        header {
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+        
+        .metadata {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .metadata span {
+            margin-right: 15px;
+        }
+        
+        #map {
+            height: 500px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .summary {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .source-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        
+        .source-badge {
+            display: inline-block;
+            padding: 3px 6px;
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .timestamp {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+            }
+            
+            .print-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{REPORT_TITLE}}</h1>
+            <div class="metadata">
+                <span><strong>Generated:</strong> {{GENERATED_DATE}}</span>
+                <span><strong>Target:</strong> {{TARGET}}</span>
+                <span><strong>Date Range:</strong> {{DATE_RANGE}}</span>
+            </div>
+            <button class="print-button" onclick="window.print()">Print Report</button>
+        </header>
+        
+        <div class="summary">
+            <h3>Summary</h3>
+            <p>{{SUMMARY_TEXT}}</p>
+            <p><strong>Total Locations:</strong> {{LOCATION_COUNT}}</p>
+            <p><strong>Date Range:</strong> {{DATE_FROM}} to {{DATE_TO}}</p>
+            <p><strong>Sources:</strong> {{SOURCES}}</p>
+        </div>
+        
+        <div id="map"></div>
+        
+        <h3>Location Data</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Date/Time</th>
+                    <th>Location</th>
+                    <th>Coordinates</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{TABLE_ROWS}}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            <p>Generated with CreepyAI OSINT Tool v{{VERSION}} | {{FOOTER_TEXT}}</p>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([{{DEFAULT_LAT}}, {{DEFAULT_LON}}], {{DEFAULT_ZOOM}});
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Add location markers
+        const markers = [];
+        {{MARKER_JS}}
+        
+        // Fit map to all markers if there are any
+        if (markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds(), { padding: [30, 30] });
+        }
+    </script>
+</body>
+</html>

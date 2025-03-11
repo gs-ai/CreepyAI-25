@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CreepyAI Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        .info-window {
+            min-width: 200px;
+            max-width: 300px;
+        }
+        .info-window h4 {
+            margin: 2px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        .info-window p {
+            margin: 2px 0;
+            font-size: 12px;
+        }
+        .marker-cluster {
+            background-color: rgba(181, 226, 140, 0.6);
+        }
+        .marker-cluster div {
+            background-color: rgba(110, 204, 57, 0.6);
+            color: #fff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([0, 0], 2);
+        
+        // Add base tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Function to add markers from JSON
+        function loadMarkers(data) {
+            if (!data || !Array.isArray(data.locations)) {
+                console.error("Invalid data format");
+                return;
+            }
+            
+            // Create bounds to fit all markers
+            const bounds = L.latLngBounds();
+            
+            // Add markers
+            data.locations.forEach(location => {
+                if (location.latitude && location.longitude) {
+                    const marker = L.marker([location.latitude, location.longitude]).addTo(map);
+                    
+                    // Prepare popup content
+                    const date = new Date(location.timestamp).toLocaleString();
+                    const content = `
+                        <div class="info-window">
+                            <h4>${location.source || 'Unknown'}</h4>
+                            <p><strong>Date:</strong> ${date}</p>
+                            <p><strong>Location:</strong> ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}</p>
+                            ${location.context ? `<p>${location.context}</p>` : ''}
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(content);
+                    bounds.extend([location.latitude, location.longitude]);
+                }
+            });
+            
+            // Fit map to bounds if we have markers
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+        
+        // Initialize with empty data
+        loadMarkers({ locations: [] });
+        
+        // Function to be called from parent window
+        window.setMarkers = function(jsonData) {
+            try {
+                const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+                loadMarkers(data);
+            } catch (e) {
+                console.error("Error parsing markers:", e);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+"""
+{{plugin_name}} plugin implementation
+"""
+import os
+import json
+from plugins.plugin_base import PluginBase
+
+
+class {{class_name}}(PluginBase):
+    """{{plugin_description}}"""
+    
+    def __init__(self):
+        """Initialize the plugin"""
+        self.plugin_dir = os.path.dirname(os.path.abspath(__file__))
+        self.manifest = None
+    
+    def initialize(self):
+        """Initialize the plugin"""
+        manifest_path = os.path.join(self.plugin_dir, "manifest.json")
+        with open(manifest_path, 'r') as f:
+            self.manifest = json.load(f)
+        print(f"Plugin initialized: {self.manifest['name']} v{self.manifest['version']}")
+    
+    def get_manifest(self):
+        """Return the plugin manifest"""
+        return self.manifest
+    
+    def execute(self, input_data):
+        """Process the input data"""
+        # TODO: Implement your plugin logic here
+        return f"Processed by {{plugin_name}}: {input_data}"
+    
+    def cleanup(self):
+        """Clean up plugin resources"""
+        print(f"{self.manifest['name']} resources cleaned up")

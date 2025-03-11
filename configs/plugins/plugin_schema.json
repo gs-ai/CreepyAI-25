@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CreepyAI Plugin Configuration Schema",
+  "description": "Schema for validating CreepyAI plugin configuration files",
+  "type": "object",
+  "required": ["name", "version", "description", "enabled"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the plugin"
+    },
+    "version": {
+      "type": "string",
+      "description": "The version of the plugin",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "author": {
+      "type": "string",
+      "description": "The author of the plugin"
+    },
+    "description": {
+      "type": "string",
+      "description": "A description of the plugin's purpose and functionality"
+    },
+    "website": {
+      "type": "string",
+      "description": "URL to the plugin's documentation or project page",
+      "format": "uri"
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the plugin is enabled by default"
+    },
+    "priority": {
+      "type": "integer",
+      "description": "Execution priority (lower numbers execute first)",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "required": {
+      "type": "boolean",
+      "description": "Whether the plugin is required for the application to function"
+    },
+    "auto_load": {
+      "type": "boolean",
+      "description": "Whether the plugin should be loaded automatically on startup"
+    },
+    "category": {
+      "type": "string",
+      "description": "Category of the plugin",
+      "enum": ["analysis", "osint", "network", "visualization", "export", "testing", "utility", "forensics"]
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Dependencies required by the plugin",
+      "properties": {
+        "python": {
+          "type": "string",
+          "description": "Required Python version"
+        },
+        "packages": {
+          "type": "array",
+          "description": "Required Python packages",
+          "items": {
+            "type": "string"
+          }
+        },
+        "system": {
+          "type": "array",
+          "description": "Required system packages",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Plugin-specific configuration settings",
+      "additionalProperties": true,
+      "properties": {
+        "max_retries": {
+          "type": "integer",
+          "description": "Maximum number of retries for failed operations",
+          "minimum": 0
+        }
+      }
+    },
+    "development": {
+      "type": "object",
+      "description": "Development-only settings (not used in production)",
+      "properties": {
+        "log_level": {
+          "type": "string",
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        },
+        "use_mock_data": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

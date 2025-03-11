@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CreepyAI Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+        }
+        .marker-info {
+            max-width: 300px;
+            padding: 10px;
+        }
+        .marker-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .marker-content {
+            margin-bottom: 5px;
+        }
+        .marker-timestamp {
+            font-style: italic;
+            font-size: 0.8em;
+            color: #666;
+        }
+        /* Enhanced layer control styling */
+        .leaflet-control-layers {
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+            font-size: 14px;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 8px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+        }
+        .leaflet-control-layers-toggle {
+            width: 40px;
+            height: 40px;
+            background-size: 26px 26px;
+        }
+        .leaflet-control-layers-expanded {
+            padding: 10px;
+            min-width: 150px;
+        }
+        .leaflet-control-layers-selector {
+            margin: 4px;
+        }
+        .leaflet-control-layers-base label {
+            margin-bottom: 8px;
+            display: block;
+            font-weight: bold;
+        }
+        /* Custom map selector styles */
+        #map-selector {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            border-radius: 4px;
+            padding: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 2px solid rgba(0,0,0,0.2);
+        }
+        #map-selector-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            text-align: center;
+            color: #333;
+            font-size: 14px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+        }
+        .map-option {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .map-option:hover {
+            background-color: #f0f0f0;
+        }
+        .map-option.active {
+            background-color: #e8f5e9;
+            font-weight: bold;
+        }
+        .map-option img {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+        .map-tooltip {
+            position: absolute;
+            bottom: 25px;
+            right: 20px;
+            padding: 8px 12px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            font-size: 12px;
+            animation: fade-in-out 5s forwards;
+            z-index: 999;
+            pointer-events: none;
+        }
+        @keyframes fade-in-out {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <!-- Custom Map Selector UI -->
+    <div id="map-selector">
+        <div id="map-selector-title">Select Map Type</div>
+        <div id="map-options-container"></div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+    <script>
+        var map = L.map('map').setView([0, 0], 4);
+        
+        // Base layers
+        var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        var satelliteLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data: &copy; <a href="https://www.opentopomap.org">OpenTopoMap</a> contributors'
+        });
+        
+        var layers = {
+            "Street Map": streetLayer,
+            "Satellite": satelliteLayer
+        };
+        
+        L.control.layers(layers).addTo(map);
+        
+        // Marker cluster group
+        var markers = L.markerClusterGroup();
+        map.addLayer(markers);
+        
+        // Heatmap layer
+        var heatmapLayer = L.heatLayer([], { radius: 25 });
+        
+        // Add marker function
+        window.creepyAI = window.creepyAI || {};
+        window.creepyAI.addMarker = function(options) {
+            var marker = L.marker([options.lat, options.lng], {
+                title: options.title,
+                icon: L.icon({
+                    iconUrl: 'icons/' + (options.icon || 'default-icon.png'),
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).bindPopup(options.popup);
+            
+            marker.on('click', function() {
+                window.onMarkerClick(options.id);
+            });
+            
+            markers.addLayer(marker);
+        };
+        
+        // Remove marker function
+        window.creepyAI.removeMarker = function(markerId) {
+            markers.eachLayer(function(layer) {
+                if (layer.options.title === markerId) {
+                    markers.removeLayer(layer);
+                }
+            });
+        };
+        
+        // Update marker function
+        window.creepyAI.updateMarker = function(options) {
+            window.creepyAI.removeMarker(options.id);
+            window.creepyAI.addMarker(options);
+        };
+        
+        // Clear markers function
+        window.creepyAI.clearMarkers = function() {
+            markers.clearLayers();
+        };
+        
+        // Set view function
+        window.creepyAI.setView = function(lat, lng, zoom) {
+            map.setView([lat, lng], zoom);
+        };
+        
+        // Fit bounds function
+        window.creepyAI.fitBounds = function() {
+            map.fitBounds(markers.getBounds());
+        };
+        
+        // Select marker function
+        window.creepyAI.selectMarker = function(markerId) {
+            markers.eachLayer(function(layer) {
+                if (layer.options.title === markerId) {
+                    layer.openPopup();
+                }
+            });
+        };
+        
+        // Deselect marker function
+        window.creepyAI.deselectMarker = function() {
+            map.closePopup();
+        };
+        
+        // Set map layer function
+        window.creepyAI.setMapLayer = function(layerName) {
+            if (layers[layerName]) {
+                map.addLayer(layers[layerName]);
+            }
+        };
+        
+        // Toggle heatmap function
+        window.creepyAI.toggleHeatmap = function(enabled) {
+            if (enabled) {
+                map.addLayer(heatmapLayer);
+            } else {
+                map.removeLayer(heatmapLayer);
+            }
+        };
+        
+        // Toggle clustering function
+        window.creepyAI.toggleClustering = function(enabled) {
+            if (enabled) {
+                map.addLayer(markers);
+            } else {
+                map.removeLayer(markers);
+            }
+        };
+        
+        // Show path function
+        window.creepyAI.showPath = function(pathData, color) {
+            var latlngs = pathData.map(function(point) {
+                return [point.lat, point.lng];
+            });
+            
+            var polyline = L.polyline(latlngs, { color: color }).addTo(map);
+            map.fitBounds(polyline.getBounds());
+        };
+        
+        // Hide path function
+        window.creepyAI.hidePath = function() {
+            map.eachLayer(function(layer) {
+                if (layer instanceof L.Polyline) {
+                    map.removeLayer(layer);
+                }
+            });
+        };
+    </script>
+</body>
+</html>

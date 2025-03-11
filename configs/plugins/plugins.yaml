@@ -1,0 +1,172 @@
+# CreepyAI Plugin System Configuration
+# This file defines global plugin settings and plugin-specific defaults
+
+# Global plugin settings
+global:
+  # Master switch to enable/disable all plugins
+  enabled: true
+  
+  # Maximum number of concurrent plugin threads
+  max_threads: 4
+  
+  # Default timeout in seconds for plugin operations
+  timeout: 60
+  
+  # Default directory paths
+  plugin_directory: "${PROJECT_ROOT}/plugins"
+  configs_directory: "${PROJECT_ROOT}/plugins/configs"
+  
+  # Default plugin logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  log_level: "INFO"
+  
+  # Auto-reload plugins on configuration change
+  auto_reload: true
+  
+  # Plugin execution order priority (lower numbers execute first)
+  default_priority: 100
+
+# Plugin-specific settings - used if not overridden by individual .conf files
+plugins:
+  DummyPlugin:
+    enabled: true
+    priority: 0
+    description: "A simple example plugin for testing"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: true
+    dependencies: []
+  
+  GeoIPPlugin:
+    enabled: true
+    priority: 10
+    description: "Plugin for IP address geolocation"
+    version: "1.1.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: true
+    dependencies: ["requests", "geoip2"]
+    config:
+      database_path: "${DATA_DIR}/GeoLite2-City.mmdb"
+      cache_results: true
+      cache_timeout: 86400
+  
+  SocialMediaPlugin:
+    enabled: true
+    priority: 20
+    description: "Plugin for social media data extraction"
+    version: "1.2.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: ["requests", "beautifulsoup4"]
+    config:
+      rate_limit: 5
+      timeout: 30
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124"
+  
+  DocumentAnalyzer:
+    enabled: true
+    priority: 30
+    description: "Analyzes documents for location metadata"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: ["python-docx", "PyPDF2"]
+  
+  FileSystemWatcher:
+    enabled: true
+    priority: 40
+    description: "Monitors file system for new geolocation data"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: ["watchdog"]
+  
+  LocalDataHarvester:
+    enabled: true
+    priority: 50
+    description: "Extracts location data from local files"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: []
+  
+  MetadataExtractor:
+    enabled: true
+    priority: 30
+    description: "Extracts location metadata from various file types"
+    version: "1.1.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: true
+    dependencies: ["exifread", "pillow"]
+  
+  NetworkScanner:
+    enabled: false
+    priority: 60
+    description: "Scans network for devices with location data"
+    version: "0.9.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: ["scapy"]
+    config:
+      scan_timeout: 5
+      max_hosts: 254
+  
+  OfflineReconPlugin:
+    enabled: true
+    priority: 70
+    description: "Performs offline reconnaissance"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+  
+  PasswordAuditor:
+    enabled: false
+    priority: 80
+    description: "Audits password strength"
+    version: "0.8.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+  
+  SocialMediaScraper:
+    enabled: true
+    priority: 20
+    description: "Scrapes social media for location data"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: ["requests", "beautifulsoup4", "selenium"]
+  
+  WifiMonitor:
+    enabled: false
+    priority: 90
+    description: "Monitors wifi networks for location data"
+    version: "0.7.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: false
+    dependencies: ["scapy", "wifi"]
+
+  EnhancedGeoPlugin:
+    enabled: true
+    priority: 25
+    description: "Enhanced geolocation plugin with additional features"
+    version: "1.0.0"
+    author: "CreepyAI Team"
+    required: false
+    auto_load: true
+    dependencies: ["requests", "geopy"]
+    config:
+      api_key: "YOUR_API_KEY"
+      use_cache: true
+      cache_timeout: 86400
+      max_retries: 3

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document>
+        <name>{name}</name>
+        <description>{description}</description>
+        
+        <!-- Default style -->
+        <Style id="defaultStyle">
+            <IconStyle>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/red-circle.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        
+        <!-- Twitter style -->
+        <Style id="twitterStyle">
+            <IconStyle>
+                <color>ffff0000</color>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        
+        <!-- Facebook style -->
+        <Style id="facebookStyle">
+            <IconStyle>
+                <color>ffff0000</color>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        
+        <!-- Instagram style -->
+        <Style id="instagramStyle">
+            <IconStyle>
+                <color>ffff00ff</color>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/purple-circle.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        
+        <!-- Flickr style -->
+        <Style id="flickrStyle">
+            <IconStyle>
+                <color>ffff6666</color>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/pink-circle.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        
+        <!-- Foursquare style -->
+        <Style id="foursquareStyle">
+            <IconStyle>
+                <color>ff00ff00</color>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        
+        <Style id="locationIcon">
+            <IconStyle>
+                <scale>1.0</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/red-circle.png</href>
+                </Icon>
+                <hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+            </IconStyle>
+            <LabelStyle>
+                <scale>0.8</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="locationIconHighlighted">
+            <IconStyle>
+                <scale>1.2</scale>
+                <Icon>
+                    <href>http://maps.google.com/mapfiles/kml/paddle/red-circle.png</href>
+                </Icon>
+                <hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>
+            </IconStyle>
+            <LabelStyle>
+                <scale>1.0</scale>
+            </LabelStyle>
+        </Style>
+        <StyleMap id="locationStyleMap">
+            <Pair>
+                <key>normal</key>
+                <styleUrl>#locationIcon</styleUrl>
+            </Pair>
+            <Pair>
+                <key>highlight</key>
+                <styleUrl>#locationIconHighlighted</styleUrl>
+            </Pair>
+        </StyleMap>
+        
+        <!-- Placemarks will be inserted here -->
+        {placemarks}
+        
+        <!-- Path will be inserted here if enabled -->
+        {path}
+        
+        <!-- Additional metadata -->
+        <ExtendedData>
+            <Data name="createdBy">
+                <value>CreepyAI v2.5.0</value>
+            </Data>
+            <Data name="exportDate">
+                <value>{export_date}</value>
+            </Data>
+            <Data name="locationCount">
+                <value>{location_count}</value>
+            </Data>
+        </ExtendedData>
+    </Document>
+</kml>

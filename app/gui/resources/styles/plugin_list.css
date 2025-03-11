@@ -1,0 +1,36 @@
+/* Styles for the plugin list widget */
+
+QListWidget {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+QListWidget::item {
+    border-bottom: 1px solid #eee;
+    padding: 6px;
+}
+
+QListWidget::item:selected {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Style for category headers */
+QListWidget::item:disabled {
+    background-color: #e9ecef;
+    color: #495057;
+    font-weight: bold;
+    padding-top: 10px;
+    padding-bottom: 5px;
+}
+
+/* Plugin items should be indented */
+QListWidget::item[isPlugin=true] {
+    padding-left: 15px;
+}
+
+QListWidget::item:hover:!selected {
+    background-color: #e9ecef;
+}

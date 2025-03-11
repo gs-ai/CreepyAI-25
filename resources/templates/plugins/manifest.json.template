@@ -1,0 +1,16 @@
+{
+    "name": "{{plugin_name}}",
+    "version": "1.0.0",
+    "description": "{{plugin_description}}",
+    "author": "{{author}}",
+    "min_api_version": "1.0.0",
+    "class_name": "{{class_name}}",
+    "permissions": [
+        "read_input",
+        "write_output"
+    ],
+    "settings": {
+        "enabled": true,
+        "priority": 10
+    }
+}

@@ -1,0 +1,39 @@
+# CreepyAI Sample Configuration
+
+# Application settings
+application:
+  name: "Sample CreepyAI Project"
+  version: "0.1.0"
+  debug_mode: true
+
+# Data settings
+data:
+  input_dir: "data/input"
+  output_dir: "data/output"
+  temp_dir: "data/temp"
+  
+# Model settings
+models:
+  model_dir: "models"
+  default_model: "sample_model"
+  model_parameters:
+    learning_rate: 0.01
+    batch_size: 64
+    epochs: 10
+  
+# Plugin system
+plugins:
+  enabled: true
+  directory: "plugins"
+  auto_load: true
+  allowed_plugins:
+    - "text_analyzer"
+    - "image_processor"
+    - "data_visualizer"
+  
+# Logging
+logging:
+  level: "DEBUG"
+  log_dir: "logs"
+  log_rotation: true
+  max_log_size: 10485760  # 10 MB

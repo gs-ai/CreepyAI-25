@@ -1,4 +1,4 @@
-"""
+# Version: 2021.09.29.001"""
 Icons module for CreepyAI
 
 This module provides access to application icons using either PyQt5 or standard paths.

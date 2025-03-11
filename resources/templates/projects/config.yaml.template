@@ -1,0 +1,29 @@
+# {{project_name}} Configuration
+
+# Application settings
+application:
+  name: "{{project_name}}"
+  version: "0.1.0"
+  debug_mode: {{debug_mode}}
+
+# Data settings
+data:
+  input_dir: "data/input"
+  output_dir: "data/output"
+  temp_dir: "data/temp"
+  
+# Model settings
+models:
+  model_dir: "models"
+  default_model: "{{default_model}}"
+  
+# Plugin system
+plugins:
+  enabled: {{plugins_enabled}}
+  directory: "plugins"
+  auto_load: true
+  
+# Logging
+logging:
+  level: "{{logging_level}}"
+  log_dir: "logs"

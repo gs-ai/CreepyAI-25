@@ -1,0 +1,12 @@
+# CreepyAI Plugin Configuration
+
+enabled_plugins: []
+
+plugin_paths:
+  - plugins/src
+  - src/plugins
+
+# Plugin configuration settings can be specified here
+settings:
+  autoload: true
+  check_dependencies: true

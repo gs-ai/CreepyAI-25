@@ -49,7 +49,7 @@ touch creepy_map_view_new.py
 
 ### Step 2: Use Python to read the file and write a fixed version
 ```python
-with open('creepy/ui/creepy_map_view.py', 'r') as src:
+with open('app/ui/creepy_map_view.py', 'r') as f:
     lines = src.readlines()
 
 with open('creepy_map_view_new.py', 'w') as dst:

@@ -1,0 +1,65 @@
+"""
+${plugin_name} - A plugin for CreepyAI.
+${description}
+"""
+import os
+import sys
+import logging
+from typing import Dict, List, Any, Optional
+
+# Use absolute imports for reliability
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+from app.plugins.plugin_base import PluginBase
+
+logger = logging.getLogger('creepyai.plugins.${plugin_name_lower}')
+
+class ${plugin_class_name}(PluginBase):
+    """
+    ${description}
+    """
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        """Initialize the plugin.
+        
+        Args:
+            config: Plugin configuration
+        """
+        super().__init__(config)
+        self.name = "${plugin_name}"
+        self.description = "${description}"
+        self.version = "${version}"
+        self.author = "${author}"
+        
+        logger.debug(f"{self.name} plugin initialized")
+    
+    def execute(self, *args, **kwargs) -> Dict[str, Any]:
+        """Execute the plugin's functionality.
+        
+        Args:
+            *args: Positional arguments
+            **kwargs: Keyword arguments
+            
+        Returns:
+            Dictionary with results
+        """
+        logger.info(f"Executing {self.name}")
+        
+        # Your plugin code goes here
+        
+        return {
+            "status": "success",
+            "message": f"{self.name} executed successfully",
+            "results": {}
+        }
+    
+    def get_requirements(self) -> List[str]:
+        """Get list of plugin dependencies.
+        
+        Returns:
+            List of required packages or plugins
+        """
+        return ${requirements}
+    
+    def cleanup(self) -> None:
+        """Clean up resources used by the plugin."""
+        logger.debug(f"Cleaning up {self.name}")

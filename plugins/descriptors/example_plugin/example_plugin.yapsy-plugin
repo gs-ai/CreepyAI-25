@@ -1,9 +1,0 @@
-[Core]
-Name = ExamplePlugin
-Module = example_plugin
-
-[Documentation]
-Author = CreepyAI Team
-Version = 1.0.0
-Website = https://example.com
-Description = An example plugin for CreepyAI

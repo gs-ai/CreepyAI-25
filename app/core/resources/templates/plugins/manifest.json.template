@@ -1,0 +1,22 @@
+{
+  "name": "${plugin_name}",
+  "version": "${version}",
+  "description": "${description}",
+  "author": "${author}",
+  "main": "main.py",
+  "class": "${plugin_class_name}",
+  "requirements": ${requirements},
+  "compatibility": {
+    "minimum_version": "2.5.0",
+    "maximum_version": ""
+  },
+  "settings": [
+    {
+      "name": "example_setting",
+      "display_name": "Example Setting",
+      "type": "string",
+      "default": "default value",
+      "description": "An example setting for this plugin"
+    }
+  ]
+}

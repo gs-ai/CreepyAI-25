@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'app/gui/resources/creepyai_mainwindow.ui'
+#
+# Created with: PyQt5 UI code generator 5.15.9
+#
+# WARNING: Any manual changes made to this file will be lost if pyuic5 is re-run.
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+class Ui_CreepyAIMainWindow(object):
+    def setupUi(self, CreepyAIMainWindow):
+        CreepyAIMainWindow.setObjectName("CreepyAIMainWindow")
+        CreepyAIMainWindow.resize(1483, 719)
+        
+        self.centralwidget = QtWidgets.QWidget(CreepyAIMainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.centralwidget)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+
+        self.centralStackedWidget = QtWidgets.QStackedWidget(self.centralwidget)
+        self.centralStackedWidget.setObjectName("centralStackedWidget")
+        
+        self.mapPage = QtWidgets.QWidget()
+        self.mapPage.setObjectName("mapPage")
+        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.mapPage)
+        self.verticalLayout_4.setObjectName("verticalLayout_4")
+        
+        self.mapWebView = QtWidgets.QLabel(self.mapPage)
+        self.mapWebView.setObjectName("mapWebView")
+        self.verticalLayout_4.addWidget(self.mapWebView)
+        
+        self.centralStackedWidget.addWidget(self.mapPage)
+
+        self.analysisPage = QtWidgets.QWidget()
+        self.analysisPage.setObjectName("analysisPage")
+        self.centralStackedWidget.addWidget(self.analysisPage)
+
+        self.verticalLayout_2.addWidget(self.centralStackedWidget)
+        CreepyAIMainWindow.setCentralWidget(self.centralwidget)
+
+        self.menubar = QtWidgets.QMenuBar(CreepyAIMainWindow)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1483, 21))
+        self.menubar.setObjectName("menubar")
+
+        self.menuCreepy = QtWidgets.QMenu(self.menubar)
+        self.menuCreepy.setObjectName("menuCreepy")
+
+        self.menuEdit = QtWidgets.QMenu(self.menubar)
+        self.menuEdit.setObjectName("menuEdit")
+
+        self.menuAbout = QtWidgets.QMenu(self.menubar)
+        self.menuAbout.setObjectName("menuAbout")
+
+        CreepyAIMainWindow.setMenuBar(self.menubar)
+
+        self.actionExit = QtWidgets.QAction(CreepyAIMainWindow)
+        self.actionExit.setObjectName("actionExit")
+        self.actionExit.triggered.connect(CreepyAIMainWindow.close)  # 🔥 **Fix: Connect Exit Action**
+
+        self.menuCreepy.addAction(self.actionExit)
+        self.menubar.addAction(self.menuCreepy.menuAction())
+
+        self.retranslateUi(CreepyAIMainWindow)
+        QtCore.QMetaObject.connectSlotsByName(CreepyAIMainWindow)
+
+    def retranslateUi(self, CreepyAIMainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        CreepyAIMainWindow.setWindowTitle(_translate("CreepyAIMainWindow", "CreepyAI25 - Geolocation OSINT AI tool"))
+        self.menuCreepy.setTitle(_translate("CreepyAIMainWindow", "CreepyAI25"))
+        self.menuEdit.setTitle(_translate("CreepyAIMainWindow", "Edit"))
+        self.menuAbout.setTitle(_translate("CreepyAIMainWindow", "Help"))
+        self.actionExit.setText(_translate("CreepyAIMainWindow", "Exit"))
+

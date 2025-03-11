@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CreepyAI Map</title>
+    <meta charset="utf-8">
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; }
+        #map { height: 100%; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        function initMap() {
+            // Initialize the map when the page loads
+            console.log('Map initialized');
+        }
+        
+        function addMarker(lat, lng, infoContent) {
+            console.log(`Adding marker at ${lat}, ${lng}`);
+        }
+        
+        function clearMarkers() {
+            console.log('Clearing all markers');
+        }
+        
+        function centerMap(lat, lng) {
+            console.log(`Centering map at ${lat}, ${lng}`);
+        }
+        
+        function setZoom(level) {
+            console.log(`Setting zoom to ${level}`);
+        }
+        
+        function hideMarkers() {
+            console.log('Hiding markers');
+        }
+        
+        function showMarkers() {
+            console.log('Showing markers');
+        }
+        
+        function showHeatmap() {
+            console.log('Showing heatmap');
+        }
+        
+        function hideHeatmap() {
+            console.log('Hiding heatmap');
+        }
+        
+        function fitMapToMarkers() {
+            console.log('Fitting map to markers');
+        }
+        
+        // Initialize map when the page loads
+        window.onload = initMap;
+    </script>
+</body>
+</html>

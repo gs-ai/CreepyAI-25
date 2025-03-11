@@ -1,0 +1,41 @@
+# CreepyAI Project Configuration Template
+
+name: "${project_name}"
+version: "1.0"
+created: "${date_created}"
+last_modified: "${date_created}"
+
+settings:
+  target:
+    name: "${target_name}"
+    type: "${target_type}"
+    description: "${target_description}"
+    
+  search:
+    max_depth: 3
+    time_limit: 300  # seconds
+    location_limit: 1000
+    search_terms:
+      - ${target_name}
+      - ${additional_terms}
+
+  plugins:
+    enabled: true
+    blacklist: []
+    whitelist: []
+    priority: 
+      - GeoIPPlugin
+      - SocialMediaPlugin
+      - LocationHistoryPlugin
+
+  export:
+    formats:
+      - json
+      - kml
+      - html
+    include_metadata: true
+    
+  privacy:
+    anonymize_results: false
+    secure_storage: true
+    data_retention_days: 30

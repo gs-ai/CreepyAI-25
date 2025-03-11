@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LocationPoint",
+  "description": "Schema for location data points in CreepyAI",
+  "type": "object",
+  "required": ["latitude", "longitude", "timestamp"],
+  "properties": {
+    "latitude": {
+      "type": "number",
+      "description": "Latitude coordinate in decimal degrees",
+      "minimum": -90.0,
+      "maximum": 90.0
+    },
+    "longitude": {
+      "type": "number",
+      "description": "Longitude coordinate in decimal degrees",
+      "minimum": -180.0,
+      "maximum": 180.0
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "Timestamp in ISO 8601 format",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the location data (plugin name, etc.)"
+    },
+    "accuracy": {
+      "type": "number",
+      "description": "Accuracy of the location in meters",
+      "minimum": 0
+    },
+    "altitude": {
+      "type": "number",
+      "description": "Altitude in meters above sea level"
+    },
+    "context": {
+      "type": "string",
+      "description": "Additional context or information about the location"
+    },
+    "address": {
+      "type": "object",
+      "description": "Structured address information",
+      "properties": {
+        "formatted": {
+          "type": "string",
+          "description": "Full formatted address"
+        },
+        "street": {
+          "type": "string",
+          "description": "Street name"
+        },
+        "city": {
+          "type": "string",
+          "description": "City name"
+        },
+        "state": {
+          "type": "string",
+          "description": "State or province"
+        },
+        "country": {
+          "type": "string",
+          "description": "Country name"
+        },
+        "postal_code": {
+          "type": "string",
+          "description": "Postal or ZIP code"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata related to the location",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

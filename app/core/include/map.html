@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CreepyAI Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background-color: white;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        }
+        .map-layer-control {
+            margin-bottom: 10px;
+        }
+        .map-layer-option {
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .map-layer-option:hover {
+            background-color: #f0f0f0;
+        }
+        .map-layer-option.active {
+            background-color: #e3f2fd;
+            font-weight: bold;
+        }
+        .custom-cluster-icon {
+            background-color: rgba(74, 134, 232, 0.8);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .custom-cluster-icon-sm {
+            width: 30px;
+            height: 30px;
+            font-size: 12px;
+        }
+        .custom-cluster-icon-md {
+            width: 40px;
+            height: 40px;
+            font-size: 14px;
+        }
+        .custom-cluster-icon-lg {
+            width: 50px;
+            height: 50px;
+            font-size: 16px;
+        }
+        .map-tooltip {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            max-width: 400px;
+            text-align: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .info-panel {
+            padding: 10px;
+            background: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            max-width: 250px;
+        }
+        .info-panel h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+        .timeline-control {
+            width: 300px;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        .marker-icon {
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 4px;
+            padding: 0;
+            overflow: hidden;
+        }
+        .popup-header {
+            background-color: #4a86e8;
+            color: white;
+            padding: 8px 12px;
+            font-weight: bold;
+        }
+        .popup-content {
+            padding: 8px 12px;
+        }
+        .popup-footer {
+            background-color: #f5f5f5;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #666;
+        }
+        /* Dark mode support */
+        .dark-mode {
+            filter: invert(90%) hue-rotate(180deg);
+        }
+        .dark-mode .leaflet-tile {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+        .dark-mode .marker-icon,
+        .dark-mode .custom-cluster-icon,
+        .dark-mode .leaflet-popup-content-wrapper,
+        .dark-mode .map-controls {
+            filter: invert(100%) hue-rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="map-tooltip" class="map-tooltip"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script> <!-- Add this line to include QWebChannel -->
+    <script>
+        console.log("Map HTML loaded");  // Debug message to verify HTML loading
+
+        // Initialize the map
+        const map = L.map('map').setView([39.8283, -98.5795], 4);
+        
+        // Available map layers
+        const layers = {
+            'Street Map': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }),
+            'Terrain': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+            }),
+            'Dark Mode': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            })
+        };
+        
+        // Add default layer
+        layers['Street Map'].addTo(map);
+        
+        // Create marker cluster group
+        const markers = L.markerClusterGroup({
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                let size = 'sm';
+                if (count > 50) size = 'lg';
+                else if (count > 10) size = 'md';
+                
+                return L.divIcon({
+                    html: '<div class="custom-cluster-inner">' + count + '</div>',
+                    className: 'custom-cluster-icon custom-cluster-icon-' + size,
+                    iconSize: null
+                });
+            }
+        });
+        map.addLayer(markers);
+        
+        // Create heatmap layer (initialize empty, will be filled by Python)
+        let heatmapLayer;
+        
+        // Create layer control
+        const layerControl = L.control.layers(layers, {
+            'Markers': markers
+        }).addTo(map);
+        
+        // Add map controls container
+        const controlsContainer = L.DomUtil.create('div', 'map-controls');
+        const controlsElement = L.control({position: 'topright'});
+        controlsElement.onAdd = function() {
+            return controlsContainer;
+        };
+        controlsElement.addTo(map);
+        
+        // Add timeline control (will be managed by Python)
+        const timelineContainer = L.DomUtil.create('div', 'timeline-control');
+        timelineContainer.style.display = 'none'; // Hidden by default
+        const timelineControl = L.control({position: 'bottomcenter'});
+        timelineControl.onAdd = function() {
+            return timelineContainer;
+        };
+        timelineControl.addTo(map);
+        
+        // Function to add a marker (called from Python)
+        function addMarker(lat, lon, title, description, timestamp, source, iconUrl) {
+            const icon = L.divIcon({
+                html: `<div style="background-image: url('${iconUrl || "default-marker.png"}')"></div>`,
+                className: 'marker-icon',
+                iconSize: [24, 24]
+            });
+            
+            const marker = L.marker([lat, lon], { icon: icon });
+            
+            // Create popup content with styled sections
+            const popupContent = document.createElement('div');
+            
+            // Popup header with source
+            const header = document.createElement('div');
+            header.className = 'popup-header';
+            header.textContent = source || 'Location';
+            popupContent.appendChild(header);
+            
+            // Main popup content
+            const content = document.createElement('div');
+            content.className = 'popup-content';
+            
+            if (title) {
+                const titleElem = document.createElement('h4');
+                titleElem.style.margin = '0 0 5px';
+                titleElem.textContent = title;
+                content.appendChild(titleElem);
+            }
+            
+            if (description) {
+                const descElem = document.createElement('p');
+                descElem.style.margin = '5px 0';
+                descElem.textContent = description;
+                content.appendChild(descElem);
+            }
+            
+            popupContent.appendChild(content);
+            
+            // Footer with timestamp
+            if (timestamp) {
+                const footer = document.createElement('div');
+                footer.className = 'popup-footer';
+                footer.textContent = timestamp;
+                popupContent.appendChild(footer);
+            }
+            
+            marker.bindPopup(popupContent);
+            markers.addLayer(marker);
+            
+            return marker;
+        }
+        
+        // Function to clear all markers
+        function clearMarkers() {
+            markers.clearLayers();
+        }
+        
+        // Function to fit map to all markers
+        function fitToMarkers() {
+            if (markers.getBounds().isValid()) {
+                map.fitBounds(markers.getBounds());
+            }
+        }
+        
+        // Function to toggle dark mode
+        function toggleDarkMode(enabled) {
+            document.body.classList.toggle('dark-mode', enabled);
+        }
+        
+        // Function to show a tooltip message
+        function showTooltip(message, duration = 3000) {
+            const tooltip = document.getElementById('map-tooltip');
+            tooltip.textContent = message;
+            tooltip.style.opacity = 1;
+            
+            setTimeout(() => {
+                tooltip.style.opacity = 0;
+            }, duration);
+        }
+        
+        // Expose API for Python to use
+        window.creepyMap = {
+            addMarker,
+            clearMarkers,
+            fitToMarkers,
+            toggleDarkMode,
+            showTooltip,
+            map: map,
+            markers: markers
+        };
+    </script>
+</body>
+</html>
