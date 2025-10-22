@@ -1,205 +1,166 @@
-"""
-Plugin Manager for CreepyAI
-"""
-import os
-import sys
+"""Model layer plugin manager built on the shared catalog infrastructure."""
+
+from __future__ import annotations
+
 import logging
-import importlib.util
-from typing import Dict, List, Any, Optional, Tuple
+import os
 from functools import lru_cache
+from typing import Any, Dict, List, Optional
+
+from app.plugins.catalog import PluginCatalog, PluginDescriptor
+
 
 logger = logging.getLogger(__name__)
 
+
 class PluginManager:
-    """
-    Unified plugin manager for CreepyAI that works with both PyQt5 and Tkinter
-    """
-    _instance = None
-    
+    """Unified plugin manager for CreepyAI models and view layers."""
+
+    _instance: Optional["PluginManager"] = None
+
     @classmethod
-    def get_instance(cls):
-        """Singleton pattern to get the plugin manager instance"""
+    def get_instance(cls) -> "PluginManager":
         if cls._instance is None:
             cls._instance = PluginManager()
         return cls._instance
-    
-    def __init__(self):
-        """Initialize the plugin manager"""
-        # Don't re-initialize if this is a singleton instance
+
+    def __init__(self) -> None:
         if PluginManager._instance is not None:
             return
-            
-        self.plugins = {}
-        self.plugin_paths = []
+
+        self.plugins: Dict[str, Dict[str, Any]] = {}
+        self.plugin_paths: List[str] = []
         self.loaded = False
-        self._plugin_cache = {}  # Cache for plugin instances
-    
-    def set_plugin_paths(self, paths: List[str]):
-        """Set the plugin paths to search for plugins"""
+        self.failed_plugins: Dict[str, str] = {}
+        self._plugin_cache: Dict[str, Any] = {}
+        self._catalog: Optional[PluginCatalog] = None
+        self._descriptors: Dict[str, PluginDescriptor] = {}
+
+    def set_plugin_paths(self, paths: List[str]) -> None:
         self.plugin_paths = paths
         self.loaded = False
-        # Clear cache when paths change
         self._plugin_cache.clear()
-    
-    @lru_cache(maxsize=32)  # Cache plugin discovery results
-    def discover_plugins(self) -> Dict[str, Any]:
-        """
-        Discover available plugins in the plugin paths
-        
-        Returns:
-            Dict[str, Any]: Dictionary of plugin information
-        """
-        if self.loaded:
+
+    def _default_paths(self) -> List[str]:
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../plugins"))
+        return [base]
+
+    @lru_cache(maxsize=32)
+    def discover_plugins(self, *, force_refresh: bool = False) -> Dict[str, Dict[str, Any]]:
+        if self.loaded and not force_refresh:
             return self.plugins
-            
+
+        candidate_paths = self.plugin_paths or self._default_paths()
+        prepared_paths: List[str] = []
+        for path in candidate_paths:
+            try:
+                os.makedirs(path, exist_ok=True)
+                prepared_paths.append(path)
+            except Exception as exc:
+                logger.error("Unable to prepare plugin path %s: %s", path, exc)
+
+        if not prepared_paths:
+            logger.warning("No plugin directories available for discovery")
+            self.plugins = {}
+            self.failed_plugins = {}
+            self.loaded = True
+            return self.plugins
+
+        try:
+            catalog = PluginCatalog(prepared_paths)
+        except ValueError as exc:
+            logger.error("Failed to create plugin catalog: %s", exc)
+            self.plugins = {}
+            self.failed_plugins = {}
+            self.loaded = True
+            return self.plugins
+
+        descriptors = catalog.load(force_refresh=force_refresh)
+        self._catalog = catalog
+        self._descriptors = {descriptor.identifier: descriptor for descriptor in descriptors}
         self.plugins = {}
-        
-        # Ensure the plugins directory is in sys.path
-        for path in self.plugin_paths:
-            if path not in sys.path and os.path.exists(path):
-                sys.path.append(path)
-        
-        for plugin_dir in self.plugin_paths:
-            if not os.path.exists(plugin_dir):
-                logger.warning(f"Plugin directory does not exist: {plugin_dir}")
+        self.failed_plugins = {}
+
+        for descriptor in descriptors:
+            key = descriptor.identifier
+            info = descriptor.info.copy()
+            display_name = info.get("name") or key
+            info.setdefault("description", "")
+            info.setdefault("version", "0.0")
+            info.setdefault("author", "Unknown")
+
+            if descriptor.load_error:
+                self.failed_plugins[key] = descriptor.load_error
+                logger.error("Plugin %s failed catalog validation: %s", key, descriptor.load_error)
                 continue
-                
-            logger.info(f"Searching for plugins in: {plugin_dir}")
-            
-            # Check for Python files in the directory
-            for filename in os.listdir(plugin_dir):
-                if not filename.endswith('_plugin.py') and not filename.endswith('Plugin.py'):
-                    continue
-                    
-                plugin_path = os.path.join(plugin_dir, filename)
-                plugin_name = os.path.splitext(filename)[0]
-                
-                try:
-                    # Load the module
-                    spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
-                    if spec is None or spec.loader is None:
-                        logger.warning(f"Could not load plugin spec: {plugin_path}")
-                        continue
-                        
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    
-                    # Look for plugin class (expect Plugin or InputPlugin suffix)
-                    plugin_class_name = None
-                    for name in dir(module):
-                        if name.endswith('Plugin') and name != 'InputPlugin' and name != 'Plugin':
-                            plugin_class_name = name
-                            break
-                            
-                    if not plugin_class_name:
-                        logger.warning(f"No plugin class found in {plugin_path}")
-                        continue
-                        
-                    # Get the plugin class
-                    plugin_class = getattr(module, plugin_class_name)
-                    
-                    # Create instance and store it
-                    plugin_instance = plugin_class()
-                    
-                    # Use getName or plugin_name attribute if available
-                    if hasattr(plugin_instance, 'getName'):
-                        name = plugin_instance.getName()
-                    elif hasattr(plugin_instance, 'plugin_name'):
-                        name = plugin_instance.plugin_name
-                    else:
-                        name = plugin_name
-                        
-                    self.plugins[name] = {
-                        'name': name,
-                        'path': plugin_path,
-                        'instance': plugin_instance,
-                        'module': module,
-                        'description': getattr(plugin_instance, 'description', ''),
-                        'version': getattr(plugin_instance, 'version', '1.0.0'),
-                        'author': getattr(plugin_instance, 'author', 'Unknown')
-                    }
-                    
-                    logger.info(f"Loaded plugin: {name} v{self.plugins[name]['version']}")
-                except Exception as e:
-                    logger.error(f"Error loading plugin {plugin_path}: {str(e)}")
-                    logger.debug(f"Exception details:", exc_info=True)
-        
+
+            try:
+                instance = descriptor.instantiate()
+            except Exception as exc:
+                message = f"{type(exc).__name__}: {exc}"
+                self.failed_plugins[key] = message
+                logger.error("Plugin %s could not be instantiated: %s", key, message)
+                continue
+
+            self.plugins[display_name] = {
+                "name": display_name,
+                "identifier": key,
+                "path": descriptor.path,
+                "instance": instance,
+                "module": descriptor.module,
+                "description": info.get("description", ""),
+                "version": info.get("version", "0.0"),
+                "author": info.get("author", "Unknown"),
+                "metadata": info,
+            }
+
+            logger.info("Loaded plugin: %s v%s", display_name, info.get("version", "0.0"))
+
         self.loaded = True
+        self._plugin_cache.clear()
         return self.plugins
-    
+
     def get_plugin(self, name: str) -> Optional[Any]:
-        """
-        Get a plugin by name
-        
-        Args:
-            name (str): Plugin name
-        
-        Returns:
-            Optional[Any]: Plugin instance or None if not found
-        """
         if not self.loaded:
             self.discover_plugins()
-            
-        # Use cache if available
+
         if name in self._plugin_cache:
             return self._plugin_cache[name]
-            
+
         plugin_data = self.plugins.get(name)
         if plugin_data:
-            self._plugin_cache[name] = plugin_data['instance']
-            return plugin_data['instance']
-            
+            self._plugin_cache[name] = plugin_data["instance"]
+            return plugin_data["instance"]
         return None
-        
+
     def get_plugin_names(self) -> List[str]:
-        """
-        Get a list of all plugin names
-        
-        Returns:
-            List[str]: List of plugin names
-        """
         if not self.loaded:
             self.discover_plugins()
-            
         return list(self.plugins.keys())
-        
+
     def run_plugin(self, name: str, method: str, *args, **kwargs) -> Any:
-        """
-        Run a plugin method with the given arguments
-        
-        Args:
-            name (str): Plugin name
-            method (str): Method name to call
-            *args: Positional arguments
-            **kwargs: Keyword arguments
-            
-        Returns:
-            Any: Return value from the plugin method
-        """
         plugin = self.get_plugin(name)
         if not plugin:
-            logger.error(f"Plugin not found: {name}")
+            logger.error("Plugin not found: %s", name)
             return None
-            
+
         if not hasattr(plugin, method):
-            logger.error(f"Method not found in plugin {name}: {method}")
+            logger.error("Method not found in plugin %s: %s", name, method)
             return None
-            
+
         try:
-            method_to_call = getattr(plugin, method)
-            return method_to_call(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Error running plugin {name}.{method}: {str(e)}")
+            return getattr(plugin, method)(*args, **kwargs)
+        except Exception as exc:
+            logger.error("Error running plugin %s.%s: %s", name, method, exc)
             logger.debug("Exception details:", exc_info=True)
             return None
-    
+
     def get_input_plugins(self) -> List[Any]:
-        """
-        Get all input plugins
-        
-        Returns:
-            List[Any]: List of input plugin instances
-        """
         plugins = self.discover_plugins()
-        return [p['instance'] for p in plugins.values() 
-                if hasattr(p['instance'], 'returnLocations')]
+        return [data["instance"] for data in plugins.values() if hasattr(data["instance"], "returnLocations")]
+
+    def get_manifest(self) -> Dict[str, Dict[str, Any]]:
+        return {identifier: descriptor.as_dict() for identifier, descriptor in self._descriptors.items()}
+
+    def get_failed_plugins(self) -> Dict[str, str]:
+        return dict(self.failed_plugins)

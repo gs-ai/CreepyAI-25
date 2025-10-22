@@ -10,6 +10,17 @@ _run_main = alias_module(__name__)
 
 if __name__ == "__main__":
     _run_main()
+
+This module re-exports everything from ``app.plugins.plugin_paths`` so that
+any code importing from ``app.plugins.tools`` continues to function
+without maintaining duplicate implementations.
+"""
+from app.plugins.tools._compat import alias_module
+
+_run_main = alias_module(__name__)
+
+if __name__ == "__main__":
+    _run_main()
 from app.plugins.plugin_paths import *  # noqa: F401,F403
 import runpy as _runpy
 

@@ -3,12 +3,11 @@ Plugin management for CreepyAI.
 Unified plugin manager implementation.
 """
 import os
-import sys
-import glob
 import yaml
 import logging
-import importlib.util
 from typing import Dict, List, Any, Optional
+
+from app.plugins.catalog import PluginCatalog, PluginDescriptor
 
 logger = logging.getLogger('creepyai.utilities.PluginManager')
 
@@ -17,11 +16,16 @@ class PluginManager:
     
     def __init__(self):
         """Initialize the plugin manager."""
-        self.plugins = {}
-        self.plugin_configs = {}
-        self.plugin_paths = []
+        self.plugins: Dict[str, Any] = {}
+        self.plugin_configs: Dict[str, Any] = {}
+        self.plugin_paths: List[str] = []
         self.enabled = True
         self.initialized = False
+        self.failed_plugins: Dict[str, str] = {}
+        self.enabled_plugins: List[str] = []
+        self._aliases: Dict[str, str] = {}
+        self._catalog: Optional[PluginCatalog] = None
+        self._descriptors: Dict[str, PluginDescriptor] = {}
         
         # Initialize configuration
         from app.core.config import Configuration
@@ -111,116 +115,76 @@ class PluginManager:
             logger.error(f"Error creating default plugin configuration: {e}")
             return False
     
-    def load_plugins(self) -> bool:
+    def load_plugins(self, *, force_refresh: bool = False) -> bool:
         """Load all available plugins.
-        
+
         Returns:
             bool: True if successful, False otherwise
         """
         if not self.enabled:
             logger.info("Plugins are disabled in configuration")
             return False
-            
+
         if not self.plugin_paths:
             logger.warning("No plugin paths configured")
             return False
-        
-        success = True
-        loaded_count = 0
-        
+
+        prepared_paths = []
         for path in self.plugin_paths:
-            if os.path.exists(path) and os.path.isdir(path):
-                logger.info(f"Scanning for plugins in: {path}")
-                try:
-                    # Look for Python files in the plugin directory
-                    for item in os.listdir(path):
-                        plugin_path = os.path.join(path, item)
-                        if item.endswith('.py') and os.path.isfile(plugin_path):
-                            if self._load_plugin_from_file(plugin_path):
-                                loaded_count += 1
-                        elif os.path.isdir(plugin_path) and os.path.exists(os.path.join(plugin_path, '__init__.py')):
-                            if self._load_plugin_from_directory(plugin_path):
-                                loaded_count += 1
-                except Exception as e:
-                    logger.error(f"Error loading plugins from {path}: {e}")
-                    success = False
-            else:
-                logger.warning(f"Plugin path does not exist or is not a directory: {path}")
-                
-        logger.info(f"Loaded {loaded_count} plugins")
+            try:
+                os.makedirs(path, exist_ok=True)
+                prepared_paths.append(path)
+            except Exception as exc:
+                logger.error(f"Unable to prepare plugin path {path}: {exc}")
+
+        if not prepared_paths:
+            logger.warning("No usable plugin roots available")
+            return False
+
+        try:
+            catalog = PluginCatalog(prepared_paths)
+        except ValueError as exc:
+            logger.error("Failed to initialize plugin catalog: %s", exc)
+            return False
+
+        descriptors = catalog.load(force_refresh=force_refresh)
+        allowed = {name.lower() for name in self.enabled_plugins} if self.enabled_plugins else None
+
+        self.plugins = {}
+        self.failed_plugins = {}
+        self._aliases = {}
+        self._descriptors = {descriptor.identifier: descriptor for descriptor in descriptors}
+        self._catalog = catalog
+
+        for descriptor in descriptors:
+            key = descriptor.identifier
+            display_name = descriptor.info.get("name", "")
+            display_key = display_name.lower() if isinstance(display_name, str) else ""
+
+            if allowed and key not in allowed and display_key not in allowed:
+                logger.debug("Skipping plugin %s because it is not enabled", key)
+                continue
+
+            if descriptor.load_error:
+                self.failed_plugins[key] = descriptor.load_error
+                logger.error("Failed to prepare plugin %s: %s", key, descriptor.load_error)
+                continue
+
+            try:
+                instance = descriptor.instantiate()
+            except Exception as exc:
+                message = f"{type(exc).__name__}: {exc}"
+                self.failed_plugins[key] = message
+                logger.error("Failed to instantiate plugin %s: %s", key, message)
+                continue
+
+            self.plugins[key] = instance
+            if display_key:
+                self._aliases[display_key] = key
+
+        logger.info("Loaded %s plugins (%s failed)", len(self.plugins), len(self.failed_plugins))
         self.initialized = True
-        return success and loaded_count > 0
-    
-    def _load_plugin_from_file(self, plugin_path: str) -> bool:
-        """Load a plugin from a Python file.
-        
-        Args:
-            plugin_path: Path to plugin file
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            module_name = os.path.basename(plugin_path)[:-3]  # Remove .py extension
-            logger.debug(f"Loading plugin module: {module_name} from {plugin_path}")
-            
-            # Import the module
-            spec = importlib.util.spec_from_file_location(module_name, plugin_path)
-            if spec is None or spec.loader is None:
-                logger.error(f"Could not load plugin spec: {plugin_path}")
-                return False
-                
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            
-            # Look for a Plugin class
-            if hasattr(module, 'Plugin'):
-                plugin_class = getattr(module, 'Plugin')
-                plugin = plugin_class()
-                self.plugins[module_name] = plugin
-                logger.info(f"Successfully loaded plugin: {module_name}")
-                return True
-            else:
-                logger.warning(f"No Plugin class found in {plugin_path}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error loading plugin {plugin_path}: {e}")
-            return False
-    
-    def _load_plugin_from_directory(self, plugin_dir: str) -> bool:
-        """Load a plugin from a directory.
-        
-        Args:
-            plugin_dir: Path to plugin directory
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            module_name = os.path.basename(plugin_dir)
-            logger.debug(f"Loading plugin package: {module_name} from {plugin_dir}")
-            
-            # Import the module
-            if plugin_dir not in sys.path:
-                sys.path.append(os.path.dirname(plugin_dir))
-            
-            module = importlib.import_module(module_name)
-            
-            # Look for a Plugin class
-            if hasattr(module, 'Plugin'):
-                plugin_class = getattr(module, 'Plugin')
-                plugin = plugin_class()
-                self.plugins[module_name] = plugin
-                logger.info(f"Successfully loaded plugin package: {module_name}")
-                return True
-            else:
-                logger.warning(f"No Plugin class found in {plugin_dir}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error loading plugin package {plugin_dir}: {e}")
-            return False
+        return bool(self.plugins)
     
     def get_plugins(self) -> Dict[str, Any]:
         """Get all loaded plugins.
@@ -229,17 +193,33 @@ class PluginManager:
             Dict[str, Any]: Dictionary of plugin name to plugin instance
         """
         return self.plugins
-    
+
     def get_plugin(self, name: str) -> Optional[Any]:
         """Get a specific plugin by name.
-        
+
         Args:
             name: Plugin name
-            
+
         Returns:
             Optional[Any]: Plugin instance or None if not found
         """
-        return self.plugins.get(name)
+        plugin = self.plugins.get(name)
+        if plugin:
+            return plugin
+        alias = self._aliases.get(name.lower())
+        if alias:
+            return self.plugins.get(alias)
+        return None
+
+    def get_manifest(self) -> Dict[str, Dict[str, Any]]:
+        """Expose the catalogued plugin metadata."""
+
+        return {identifier: descriptor.as_dict() for identifier, descriptor in self._descriptors.items()}
+
+    def get_failed_plugins(self) -> Dict[str, str]:
+        """Return plugins that failed to load mapped to their error message."""
+
+        return dict(self.failed_plugins)
     
     def initialize(self) -> bool:
         """Initialize the plugin manager and load plugins.

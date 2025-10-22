@@ -10,6 +10,9 @@ _run_main = alias_module(__name__)
 
 if __name__ == "__main__":
     _run_main()
+
+if __name__ == "__main__":
+    _run_main()
 from app.plugins.plugin_validator import *  # noqa: F401,F403
 import runpy as _runpy
 
