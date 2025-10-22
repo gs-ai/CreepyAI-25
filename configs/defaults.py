@@ -52,14 +52,10 @@ DEFAULT_CONFIG = {
     'geo': {
         'default_map_center': [51.505, -0.09],  # London
         'default_zoom': 13,
-        'map_provider': 'osm',  # Options: 'osm', 'google', 'carto'
+        'map_provider': 'osm',
         'gps_format': 'decimal',  # Options: 'decimal', 'dms'
         'distance_units': 'km',  # Options: 'km', 'mi'
         'geolocation_services': {
-            'opencage': {
-                'enabled': False,
-                'api_key': '',
-            },
             'nominatim': {
                 'enabled': True,
                 'user_agent': 'CreepyAI/2.5.0',
