@@ -4,6 +4,7 @@ This module re-exports everything from ``app.plugins.test_plugins`` so that
 any code importing from ``app.plugins.tools`` continues to function
 without maintaining duplicate implementations.
 """
+from app.plugins.tools._compat import alias_module
 from app.plugins.test_plugins import *  # noqa: F401,F403
 import runpy as _runpy
 
@@ -14,12 +15,10 @@ if __name__ == '__main__':
     _runpy.run_module('app.plugins.test_plugins', run_name='__main__')
 """Unit tests covering the built-in plugin system."""
 
-import os
-import sys
-import unittest
-import tempfile
-from typing import Dict, Any, List
+_run_main = alias_module(__name__)
 
+if __name__ == "__main__":
+    _run_main()
 # Add the project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
