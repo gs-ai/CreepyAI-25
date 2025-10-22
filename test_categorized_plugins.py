@@ -33,8 +33,9 @@ def test_plugin_categories():
             display_version = info.get('version', 'unknown')
             print(f"  - {display_name} (v{display_version})")
     
+    assert categories, "No plugin categories were discovered"
+
     print("\nNo errors found in plugin categorization.")
-    return True
 
 if __name__ == "__main__":
     try:
