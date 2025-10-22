@@ -39,7 +39,7 @@ python-json-logger==2.0.7
 structlog==24.1.0
 
 # Tooling & packaging
-configobj==5.0.8
+configobj==5.0.9
 python-dotenv==1.0.1
 PyInstaller==6.6.0; python_version >= '3.8'
 tqdm==4.66.4
