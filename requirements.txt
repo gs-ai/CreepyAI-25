@@ -70,7 +70,6 @@ googlemaps>=4.4.0
 configobj>=5.0.6
 ollama==0.1.5  # Python client for Ollama API
 PyInstaller>=4.5.0; python_version >= '3.6'
-python-dotenv==1.0.0  # For environment variable management
 tqdm>=4.60.0
 yapsy>=1.12.2
 
