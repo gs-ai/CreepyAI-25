@@ -1,0 +1,44 @@
+package,current_version,recommended_version,justification,risk_level
+beautifulsoup4,>=4.10.0,4.12.3,"Align with latest security fixes and parser improvements",Low
+colorama,>=0.4.4,0.4.6,"Latest bugfix release, no breaking changes",Low
+folium,>=0.12.0,0.17.0,"Upstream supports modern Leaflet APIs",Medium
+geopy,>=2.1.0,2.4.1,"Improved rate limit handling for geocoders",Medium
+lxml,>=4.8.0,4.9.4,"Patches for CVE-2024-21723",High
+pillow,>=9.0.0,10.4.0,"Security fixes and performance improvements",High
+psutil,>=5.8.0,5.9.8,"Adds process telemetry required for observability",Medium
+pyyaml,>=5.1.0,6.0.2,"Mitigates potential code execution vectors",High
+python-dateutil,>=2.8.2,2.9.0.post0,"Timezone database refresh",Low
+PyQt5,>=5.15.0,5.15.11,"Latest LTS bugfix prior to Qt6 migration",Medium
+PyQtWebEngine,>=5.15.0,5.15.7,"Match PyQt patch level",Medium
+requests,>=2.27.0,2.32.3,"TLS CVE fixes and HTTP/2 support",High
+aiohttp,N/A,3.9.5,"Async ingestion client for REST/streaming",Medium
+confluent-kafka,N/A,2.3.0,"Kafka ingestion connector",High
+fastapi,N/A,0.111.0,"Service API framework",High
+neo4j,N/A,5.20.0,"Graph analytics connectivity",Medium
+opensearch-py,N/A,2.4.2,"Search/time-series backend client",High
+pydantic,N/A,2.7.4,"Configuration and schema validation",Medium
+tenacity,N/A,8.3.0,"Standardized retry logic",Low
+uvicorn[standard],N/A,0.29.0,"ASGI server for FastAPI",Medium
+matplotlib,>=3.3.0,3.9.0,"Modern plotting for reports",Low
+networkx,N/A,3.3,"Graph algorithms for correlation",Medium
+numpy,>=1.20.0,1.26.4,"Performance gains and security updates",High
+pandas,>=1.2.0,2.2.2,"Arrow interoperability and typing",Medium
+pyarrow,N/A,16.1.0,"Columnar pipeline interchange",Medium
+scikit-learn,N/A,1.4.2,"Anomaly detection baseline models",Medium
+googlemaps,>=4.4.0,4.10.0,"Latest API coverage",Medium
+cryptography,N/A,42.0.8,"Meet compliance for encryption",High
+python-json-logger,N/A,2.0.7,"Structured logging compatibility",Low
+structlog,N/A,24.1.0,"Unified logging context",Low
+configobj,>=5.0.6,5.0.8,"Legacy config bridge until migration complete",Medium
+python-dotenv,==1.0.0,1.0.1,"Bugfix release",Low
+PyInstaller,>=4.5.0,6.6.0,"Reproducible packaging for CLI and agent",Medium
+tqdm,>=4.60.0,4.66.4,"Progress telemetry for CLI",Low
+types-requests,N/A,2.32.0.20240622,"Type checking for connector SDK",Low
+yapsy,>=1.12.2,1.12.2,"Retain temporarily for plugin compatibility",Medium
+pytest,>=6.2.0,8.2.2,"Modern pytest features",Low
+pytest-asyncio,N/A,0.23.7,"Async integration test support",Low
+pytest-cov,>=2.11.0,5.0.0,"Coverage reports for CI gating",Low
+requests-mock,N/A,1.12.1,"Deterministic connector tests",Low
+mkdocs,N/A,1.5.3,"Developer doc site",Low
+sphinx,>=3.5.0,7.3.7,"Latest doc toolchain",Low
+sphinx-rtd-theme,>=0.5.1,2.0.0,"UI alignment with Sphinx 7",Low
