@@ -135,7 +135,7 @@ registry = PluginRegistry.instance()
 # Load plugins automatically
 def load_plugin_categories():
     """Load all plugin categories and register them"""
-    categories = ['social_media', 'location_services', 'data_extraction', 'tools', 'other']
+    categories = ['social_media', 'location_services', 'data_extraction', 'other']
     
     for category in categories:
         category_path = os.path.join(plugin_dir, category)
