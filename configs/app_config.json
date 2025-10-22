@@ -48,16 +48,15 @@
     "remember_window_size": true
   },
   "geo": {
-    "default_map_center": [51.505, -0.09],
+    "default_map_center": [
+      51.505,
+      -0.09
+    ],
     "default_zoom": 13,
     "map_provider": "osm",
     "gps_format": "decimal",
     "distance_units": "km",
     "geolocation_services": {
-      "opencage": {
-        "enabled": false,
-        "api_key": ""
-      },
       "nominatim": {
         "enabled": true,
         "user_agent": "CreepyAI/2.5.0"
@@ -132,7 +131,7 @@
   "map": {
     "default_zoom": 13,
     "default_latitude": 40.7128,
-    "default_longitude": -74.0060,
+    "default_longitude": -74.006,
     "tile_provider": "OpenStreetMap"
   }
 }
