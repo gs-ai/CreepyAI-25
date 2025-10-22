@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""""""""""
-Test file for plugin system.
-Tests the plugin loading and execution mechanisms.
-""""""""""
+"""Unit tests covering the built-in plugin system."""
 
 import os
 import sys
@@ -20,67 +17,68 @@ from app.plugins.plugin_base import PluginBase
 from app.plugins.plugin_utils import validate_plugin, scan_for_plugin_classes
 
 class TestPlugins(unittest.TestCase):
-    """Test case for plugin system."""""""""""
-    
+    """Test case for the plugin system."""
+
     def setUp(self):
-        """Set up test environment."""""""""""
+        """Set up the plugin manager for each test."""
         self.plugin_manager = PluginManager()
-    
+
     def test_plugin_manager_initialization(self):
-            """Test plugin manager initialization."""""""""""
-            self.assertIsNotNone(self.plugin_manager)
-            self.assertTrue(hasattr(self.plugin_manager, 'load_plugins'))
-            self.assertTrue(hasattr(self.plugin_manager, 'get_plugins'))
-    
+        """The plugin manager exposes the expected API."""
+        self.assertIsNotNone(self.plugin_manager)
+        self.assertTrue(hasattr(self.plugin_manager, "load_plugins"))
+        self.assertTrue(hasattr(self.plugin_manager, "get_plugins"))
+
     def test_dummy_plugin(self):
-                """Test the dummy plugin."""""""""""
+        """The dummy plugin implements the expected behaviour."""
         # Import here to avoid import cycles
-                from app.plugins.DummyPlugin import DummyPlugin
-        
+        from app.plugins.DummyPlugin import DummyPlugin
+
         # Create plugin instance
-                plugin = DummyPlugin()
-        
+        plugin = DummyPlugin()
+
         # Test basic functionality
-                self.assertEqual(plugin.name, "DummyPlugin")
-                self.assertIsNotNone(plugin.description)
-                self.assertIsNotNone(plugin.version)
-                self.assertIsNotNone(plugin.author)
-        
+        self.assertEqual(plugin.name, "DummyPlugin")
+        self.assertIsNotNone(plugin.description)
+        self.assertIsNotNone(plugin.version)
+        self.assertIsNotNone(plugin.author)
+
         # Test initialization
-                result = plugin.initialize()
-                self.assertTrue(result)
-                self.assertTrue(plugin.initialized)
-        
+        result = plugin.initialize()
+        self.assertTrue(result)
+        self.assertTrue(plugin.initialized)
+
         # Test execution
-                result = plugin.execute()
-                self.assertIsInstance(result, dict)
-                self.assertEqual(result.get("status"), "success")
-    
+        result = plugin.execute()
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result.get("status"), "success")
+
     def test_plugin_validation(self):
-                    """Test plugin validation."""""""""""
+        """Valid and invalid plugins are reported appropriately."""
         # Import here to avoid import cycles
-                    from app.plugins.DummyPlugin import DummyPlugin
-        
+        from app.plugins.DummyPlugin import DummyPlugin
+
         # Create plugin instance
-                    plugin = DummyPlugin()
-        
+        plugin = DummyPlugin()
+
         # Validate plugin
-                    valid, errors = validate_plugin(plugin)
-                    self.assertTrue(valid, f"Plugin validation failed: {errors}")
-                    self.assertEqual(len(errors), 0)
-        
+        valid, errors = validate_plugin(plugin)
+        self.assertTrue(valid, f"Plugin validation failed: {errors}")
+        self.assertEqual(len(errors), 0)
+
         # Test validation with invalid plugin
         class InvalidPlugin:
-                        """Invalid plugin without required attributes and methods."""""""""""
-                    pass
-        
+            """Invalid plugin without required attributes and methods."""
+
+            pass
+
         # Create invalid plugin instance
-                    invalid_plugin = InvalidPlugin()
-        
+        invalid_plugin = InvalidPlugin()
+
         # Validate invalid plugin
-                    valid, errors = validate_plugin(invalid_plugin)
-                    self.assertFalse(valid)
-                    self.assertGreater(len(errors), 0)
+        valid, errors = validate_plugin(invalid_plugin)
+        self.assertFalse(valid)
+        self.assertGreater(len(errors), 0)
 
 if __name__ == '__main__':
-                        unittest.main()
+    unittest.main()
