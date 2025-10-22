@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from PyQt5.QtCore import QObject, pyqtSignal, QUrl, QVariant, QJsonValue, QJsonDocument
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QUrl, QVariant, QJsonValue, QJsonDocument
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
@@ -34,6 +34,9 @@ class MapController(QObject):
     clusterSelected = pyqtSignal(list)  # Emits list of location IDs when a cluster is selected
     mapMoved = pyqtSignal(float, float, float)  # Emits lat, lng, zoom when map is moved
     mapError = pyqtSignal(str)  # Emits error message when map encounters an error
+    # Additional signals expected by UI
+    markersUpdated = pyqtSignal(int)  # Emits count of markers after updates
+    mapLayerChanged = pyqtSignal(str)  # Emits name of the current map layer
     
     def __init__(self, web_view: QWebEngineView):
         """
@@ -64,6 +67,34 @@ class MapController(QObject):
         self.default_lat = 0
         self.default_lng = 0
         self.default_zoom = 4
+
+        # Layer and visibility state
+        self._available_layers: List[str] = [
+            "Street Map", "Satellite", "Terrain", "Dark Mode"
+        ]
+        self._current_layer: str = "Street Map"
+        self._visible_plugins: Dict[str, bool] = {}
+        self._date_from: Optional[datetime] = None
+        self._date_to: Optional[datetime] = None
+
+    # ---- Methods expected by UI (minimal implementations) ----
+    def update_visible_plugins(self, plugin_name: str, visible: bool) -> None:
+        """Track visibility of plugins and refresh markers if needed."""
+        try:
+            self._visible_plugins[plugin_name] = visible
+            logger.info(f"Plugin visibility changed: {plugin_name} => {visible}")
+            # In a full implementation, we'd filter displayed markers by source/plugin here
+            self._emit_markers_updated()
+        except Exception as e:
+            logger.warning(f"update_visible_plugins error: {e}")
+
+    def get_available_layers(self) -> List[str]:
+        """Return list of available base layers."""
+        return list(self._available_layers)
+
+    def get_current_layer(self) -> str:
+        """Return current base layer name."""
+        return self._current_layer
     
     def setup_map(self) -> None:
         """Set up the map view"""
@@ -412,6 +443,9 @@ class MapController(QObject):
         Args:
             layer_name: Name of the layer to set
         """
+        if layer_name in self._available_layers:
+            self._current_layer = layer_name
+            self.mapLayerChanged.emit(layer_name)
         if not self.map_ready:
             return
         
@@ -517,6 +551,67 @@ class MapController(QObject):
         }}
         """
         self.web_view.page().runJavaScript(js_code)
+
+    def update_map_markers(self) -> None:
+        """Placeholder: refresh marker display based on model and filters."""
+        try:
+            if not self.map_ready:
+                return
+            # For now, simply re-display all markers if a model exists
+            if self.location_model:
+                self.display_all_locations()
+            self._emit_markers_updated()
+        except Exception as e:
+            logger.warning(f"update_map_markers error: {e}")
+
+    def get_keyboard_shortcuts_help(self) -> Dict[str, str]:
+        """Provide basic keyboard shortcuts description for UI hints."""
+        return {
+            "Ctrl+1": "Switch to Street Map layer",
+            "Ctrl+2": "Switch to Satellite layer",
+            "Ctrl+3": "Switch to Terrain layer",
+            "Ctrl+4": "Switch to Dark Mode layer",
+        }
+
+    def show_map_tooltip(self, message: str) -> None:
+        """Optional: display a tooltip on the map (no-op placeholder)."""
+        logger.debug(f"Map tooltip: {message}")
+
+    def clear_search(self) -> None:
+        """Clear any active search filters (placeholder)."""
+        # In a full implementation we'd clear search-specific filters/state.
+        self.update_map_markers()
+
+    def search_map(self, term: str) -> int:
+        """Placeholder search on map. Returns number of matches."""
+        logger.info(f"search_map called with term: {term}")
+        # Without a concrete data model here, return 0.
+        return 0
+
+    def search_for_targets(self, term: str) -> List[Dict[str, Any]]:
+        """Placeholder target search. Returns an empty list."""
+        logger.info(f"search_for_targets called with term: {term}")
+        return []
+
+    def set_date_range(self, from_datetime: Optional[datetime], to_datetime: Optional[datetime]) -> None:
+        """Store a date range for filtering (placeholder)."""
+        self._date_from = from_datetime
+        self._date_to = to_datetime
+        logger.info(f"Date range set: {self._date_from} to {self._date_to}")
+        self.update_map_markers()
+
+    def apply_settings(self) -> None:
+        """Apply map-related settings (placeholder)."""
+        logger.debug("apply_settings called")
+        self.update_map_markers()
+
+    def _emit_markers_updated(self) -> None:
+        """Emit markersUpdated with current marker count."""
+        try:
+            count = len(self.markers) if isinstance(self.markers, dict) else 0
+            self.markersUpdated.emit(count)
+        except Exception:
+            pass
     
     # JavaScript callable slots
     

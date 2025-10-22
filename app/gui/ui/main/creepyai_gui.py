@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, List
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QSplitter, QAction, QToolBar, QStatusBar, 
-    QApplication, QFileDialog, QMessageBox, QLabel,
+    QApplication, QFileDialog, QMessageBox, QLabel, QStyle,
     QTabWidget, QPushButton, QLineEdit, QDateEdit, QFrame, QComboBox, QToolButton, QMenu
 )
 from PyQt5.QtCore import Qt, QSize, pyqtSlot, QDate, QTimer
@@ -52,7 +52,7 @@ class CreepyAIGUI(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         
-        # Create and initialize the toolbar
+        # Create and initialize the toolbar (note: map widgets are created below)
         self.toolbar = self.create_toolbar()
         # No need to add the toolbar to the layout as it's added to the main window directly
         
@@ -98,6 +98,12 @@ class CreepyAIGUI(QMainWindow):
         
         # Initialize map controller
         self.map_controller = MapController(self.map_widget)
+
+        # Now that the map controller exists, update toolbar map layer combo
+        try:
+            self._populate_map_layer_combo_from_controller()
+        except Exception as e:
+            logger.warning(f"Could not populate map layer combo from controller: {e}")
         
         # Connect plugin selector to map controller
         self.plugin_selector.connect_to_map_controller(self.map_controller)
@@ -185,13 +191,13 @@ class CreepyAIGUI(QMainWindow):
             }
         """)
         
-        # Make sure we initialize the map controller before accessing it
-        if not hasattr(self, 'map_controller') or self.map_controller is None:
-            self.map_controller = MapController(self.map_widget)
-        
+        # Try to populate from controller if available; otherwise, use defaults
         try:
-            self.map_layer_combo.addItems(self.map_controller.get_available_layers())
-            self.map_layer_combo.setCurrentText(self.map_controller.get_current_layer())
+            if hasattr(self, 'map_controller') and self.map_controller is not None:
+                self.map_layer_combo.addItems(self.map_controller.get_available_layers())
+                self.map_layer_combo.setCurrentText(self.map_controller.get_current_layer())
+            else:
+                raise RuntimeError("Map controller not yet initialized")
         except Exception as e:
             logger.warning(f"Could not initialize map layers: {e}")
             self.map_layer_combo.addItems(["Street Map", "Satellite", "Terrain", "Dark Mode"])
@@ -381,6 +387,22 @@ class CreepyAIGUI(QMainWindow):
         # Add toolbar to main window
         self.addToolBar(toolbar)
         return toolbar
+
+    def _populate_map_layer_combo_from_controller(self):
+        """Populate the map layer combo box from the map controller safely."""
+        if not hasattr(self, 'map_layer_combo') or self.map_layer_combo is None:
+            return
+        if not hasattr(self, 'map_controller') or self.map_controller is None:
+            return
+        # Reset and populate
+        self.map_layer_combo.clear()
+        layers = self.map_controller.get_available_layers()
+        self.map_layer_combo.addItems(layers)
+        try:
+            self.map_layer_combo.setCurrentText(self.map_controller.get_current_layer())
+        except Exception:
+            # If current layer isn't in list yet, ignore
+            pass
 
     def create_action(self, text, icon_name, tooltip, shortcut=None, slot=None):
         """Create a QAction with the specified properties and connect to a slot"""
@@ -758,8 +780,13 @@ class CreepyAIGUI(QMainWindow):
         """Connect signals and slots"""
         # Connect map controller signals
         if self.map_controller:
-            self.map_controller.markersUpdated.connect(self.update_marker_count)
-            self.map_controller.mapLayerChanged.connect(self.update_layer_selection)
+            try:
+                if hasattr(self.map_controller, 'markersUpdated'):
+                    self.map_controller.markersUpdated.connect(self.update_marker_count)
+                if hasattr(self.map_controller, 'mapLayerChanged'):
+                    self.map_controller.mapLayerChanged.connect(self.update_layer_selection)
+            except Exception as e:
+                logger.warning(f"Could not connect map controller signals: {e}")
     
     @pyqtSlot(int)
     def update_marker_count(self, count):
