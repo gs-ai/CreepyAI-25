@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Utility script to check and troubleshoot the plugin system
-"""
-import os
-import sys
-import logging
-import importlib
-import traceback
-from typing import List, Dict, Any
+"""Utility script to check and troubleshoot the plugin system."""
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+import traceback
+from pathlib import Path
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Ensure this script can import app modules
-script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, script_dir)
 
-def check_plugin_system():
+def _extend_sys_path(base_dir: Path) -> None:
+    if str(base_dir) not in sys.path:
+        sys.path.insert(0, str(base_dir))
+
+
+def check_plugin_system(base_dir: Path) -> None:
     """Check if the plugin system is properly configured"""
     try:
+        _extend_sys_path(base_dir)
         from app.core.plugins import PluginManager
-        
+
         # Create plugin manager
         plugin_manager = PluginManager()
         
@@ -50,15 +50,16 @@ def check_plugin_system():
         print("\nPlugin system check completed successfully.")
         
     except ImportError as e:
-        logger.error(f"Failed to import plugin system: {e}")
+        logger.error("Failed to import plugin system: %s", e)
         logger.error("Make sure the app module is in the Python path.")
     except Exception as e:
         logger.error(f"Error checking plugin system: {e}")
         logger.error(traceback.format_exc())
 
-def check_specific_plugin(plugin_name):
+def check_specific_plugin(plugin_name: str, base_dir: Path) -> None:
     """Check a specific plugin by name"""
     try:
+        _extend_sys_path(base_dir)
         from app.core.plugins import PluginManager
         
         # Create plugin manager
@@ -111,19 +112,33 @@ def check_specific_plugin(plugin_name):
         print("\nPlugin check completed.")
         
     except ImportError as e:
-        logger.error(f"Failed to import plugin system: {e}")
+        logger.error("Failed to import plugin system: %s", e)
     except Exception as e:
         logger.error(f"Error checking plugin: {e}")
         logger.error(traceback.format_exc())
 
-def main():
-    """Main function"""
-    if len(sys.argv) > 1:
-        # Check specific plugin
-        check_specific_plugin(sys.argv[1])
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Inspect CreepyAI plugin registrations")
+    parser.add_argument("--plugin", help="Specific plugin to inspect")
+    parser.add_argument("--base-dir", type=Path, default=Path(__file__).resolve().parent, help="Project base directory")
+    parser.add_argument("--verbose", action='store_true', help="Enable debug logging")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    base_dir = args.base_dir.resolve()
+    if args.plugin:
+        check_specific_plugin(args.plugin, base_dir)
     else:
-        # Check the entire plugin system
-        check_plugin_system()
-    
-if __name__ == "__main__":
-    main()
+        check_plugin_system(base_dir)
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover - CLI entry point
+    raise SystemExit(main())

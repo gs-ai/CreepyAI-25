@@ -6,6 +6,7 @@ CreepyAI is an open-source OSINT (Open Source Intelligence) assistant designed t
 ## Features
 
 - **Multi-platform Search**: Query multiple sources simultaneously
+- **Credential-free Operation**: Work entirely with offline data exports and open data sources—no API keys or logins required
 - **Data Visualization**: Visualize relationships between data points
 - **Project Management**: Save and organize your research
 - **Plugin System**: Extend functionality with custom plugins
