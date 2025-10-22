@@ -20,11 +20,11 @@ logger = logging.getLogger('creepyai')
 logger.setLevel(logging.INFO)
 logger.info("Logger creepyai initialized with level INFO")
 
-# Get project root
-project_root = Path(__file__).resolve().parent
+# Get project root (repository root, not the ``app`` package directory)
+project_root = Path(__file__).resolve().parent.parent
 os.chdir(project_root)
 
-# Add project root to Python path
+# Add project root to Python path so ``import app`` works reliably
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -136,11 +136,14 @@ def main():
     if args.cli:
         logger.info("Starting CLI mode")
         try:
-            from app.cli.handler.cli_handler import CLIHandler
-            cli = CLIHandler(plugin_manager=plugin_manager)
-            return cli.run()
-        except ImportError:
-            logger.error("CLI mode not available")
+            from app.plugins.plugin_cli import PluginCLI
+
+            cli = PluginCLI()
+            cli.manager = plugin_manager  # Reuse initialised manager
+            return cli.run([])
+        except Exception as exc:
+            logger.error("CLI mode failed: %s", exc)
+            logger.debug(traceback.format_exc())
             return 1
     else:
         # Initialize Qt first
