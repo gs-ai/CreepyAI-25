@@ -28,7 +28,7 @@ def get_app_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
 
 def get_user_data_dir() -> Path:
-    """
+    r"""
     Get the user data directory for storing application data
     
     This follows platform-specific conventions:
@@ -57,7 +57,7 @@ def get_user_data_dir() -> Path:
         return Path(base_path) / 'creepyai'
 
 def get_user_config_dir() -> Path:
-    """
+    r"""
     Get the user config directory for storing application configuration
     
     This follows platform-specific conventions:
@@ -86,7 +86,7 @@ def get_user_config_dir() -> Path:
         return Path(base_path) / 'creepyai'
 
 def get_user_log_dir() -> Path:
-    """
+    r"""
     Get the user log directory for storing application logs
     
     This follows platform-specific conventions:
@@ -115,7 +115,7 @@ def get_user_log_dir() -> Path:
         return Path(base_path) / 'creepyai' / 'logs'
 
 def get_user_cache_dir() -> Path:
-    """
+    r"""
     Get the user cache directory for storing temporary data
     
     This follows platform-specific conventions:
