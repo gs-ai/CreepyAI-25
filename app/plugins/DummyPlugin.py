@@ -1,175 +1,179 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+"""Dummy plugin used by the automated test-suite."""
 
-""""""""""
-Dummy plugin for testing and demonstration purposes.
-A simple plugin that doesn't do much but helps test the plugin framework.'
-""""""""""
+from __future__ import annotations
 
-import os
-import sys
-import random
-import logging
-import json
-import math
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
 import configparser
+import logging
+import math
+import os
+import random
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
-# Use absolute imports
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-from app.plugins.plugin_base import PluginBase, LocationPoint
+from app.plugins.plugin_base import LocationPoint, PluginBase
 
-logger = logging.getLogger('creepyai.plugins.dummy')
+logger = logging.getLogger("creepyai.plugins.dummy")
+
 
 class DummyPlugin(PluginBase):
-    """"""""""
-    A simple dummy plugin for testing and demonstration purposes.
-    This plugin doesn't do much except log information.'
-    """"""""""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the plugin"""""""""""
-        super().__init__()  # Don't pass config to parent constructor'
+    """A minimal plugin that simulates returning location data."""
+
+    def __init__(self, settings: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__()
         self.name = "DummyPlugin"
         self.description = "A simple plugin for testing"
         self.version = "1.0.0"
         self.author = "CreepyAI Team"
-        self.enabled = True
-        
-        # Initialize config dict if provided
-        if config:
-            for key, value in config.items():
-                self.config[key] = value
-                
-                logger.debug("DummyPlugin initialized")
-        
-        # Load config from DummyPlugin.conf if available
-                self._load_config_from_conf()
-    
-    def _load_config_from_conf(self):
-                    """Load configuration from DummyPlugin.conf if available"""""""""""
-                    config_path = os.path.join(os.path.dirname(__file__), 'DummyPlugin.conf')
-        if os.path.exists(config_path):
-                        config = configparser.ConfigParser()
-                        config.read(config_path)
-            
-            # Update self.config with values from the config file
-            for section in config.sections():
-                for key, value in config.items(section):
-                                self.config[key] = value
-    
+
+        self.settings: Dict[str, Any] = {}
+        if settings:
+            self.settings.update(settings)
+
+        self._load_config_from_conf()
+
+    # ------------------------------------------------------------------
+    # Configuration helpers
+    def _load_config_from_conf(self) -> None:
+        """Load configuration overrides from ``DummyPlugin.conf`` if present."""
+
+        config_path = os.path.join(os.path.dirname(__file__), "DummyPlugin.conf")
+        if not os.path.exists(config_path):
+            return
+
+        parser = configparser.ConfigParser()
+        parser.read(config_path)
+        for section in parser.sections():
+            for key, value in parser.items(section):
+                self.settings[key] = value
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
-                                    """Return configuration options for this plugin"""""""""""
-                                return [
-                                {
-                                "name": "base_latitude",
-                                "display_name": "Base Latitude",
-                                "type": "float",
-                                "default": 37.7749,
-                                "required": True,
-                                "description": "Base latitude for generating locations"
-                                },
-                                {
-                                "name": "base_longitude",
-                                "display_name": "Base Longitude",
-                                "type": "float",
-                                "default": -122.4194,
-                                "required": True,
-                                "description": "Base longitude for generating locations"
-                                },
-                                {
-                                "name": "location_variance",
-                                "display_name": "Location Variance (meters)",
-                                "type": "int",
-                                "default": 100,
-                                "required": True,
-                                "description": "Variance in meters for generating random locations"
-                                },
-                                {
-                                "name": "location_count",
-                                "display_name": "Number of Locations",
-                                "type": "int",
-                                "default": 10,
-                                "required": True,
-                                "description": "Number of locations to generate"
-                                },
-                                {
-                                "name": "date_range_days",
-                                "display_name": "Date Range (days)",
-                                "type": "int",
-                                "default": 30,
-                                "required": True,
-                                "description": "Date range in days for generating random timestamps"
-                                }
-                                ]
-    
+        """Describe configuration values understood by the plugin."""
+
+        return [
+            {
+                "name": "base_latitude",
+                "display_name": "Base Latitude",
+                "type": "float",
+                "default": 37.7749,
+                "required": True,
+                "description": "Base latitude for generating locations",
+            },
+            {
+                "name": "base_longitude",
+                "display_name": "Base Longitude",
+                "type": "float",
+                "default": -122.4194,
+                "required": True,
+                "description": "Base longitude for generating locations",
+            },
+            {
+                "name": "location_variance",
+                "display_name": "Location Variance (meters)",
+                "type": "int",
+                "default": 100,
+                "required": True,
+                "description": "Variance in meters for generating random locations",
+            },
+            {
+                "name": "location_count",
+                "display_name": "Number of Locations",
+                "type": "int",
+                "default": 10,
+                "required": True,
+                "description": "Number of locations to generate",
+            },
+            {
+                "name": "date_range_days",
+                "display_name": "Date Range (days)",
+                "type": "int",
+                "default": 30,
+                "required": True,
+                "description": "Date range in days for generating random timestamps",
+            },
+        ]
+
     def is_configured(self) -> Tuple[bool, str]:
-                                    """Check if the plugin is properly configured"""""""""""
-                                    required_keys = ["base_latitude", "base_longitude", "location_variance", "location_count", "date_range_days"]
-        for key in required_keys:
-            if key not in self.config:
-                                        return False, f"Missing required configuration: {key}"
-                                    return True, "Dummy plugin is configured"
-    
-                                    def collect_locations(self, target: str, date_from: Optional[datetime] = None,
-                         date_to: Optional[datetime] = None) -> List[LocationPoint]:
-                                        """"""""""
-                                        Generate simulated location data
-                                        """"""""""
-                                        locations = []
-        
-                                        base_lat = float(self.config.get("base_latitude", 37.7749))
-                                        base_lon = float(self.config.get("base_longitude", -122.4194))
-                                        variance = int(self.config.get("location_variance", 100))
-                                        count = int(self.config.get("location_count", 10))
-                                        date_range_days = int(self.config.get("date_range_days", 30))
-        
+        """Return whether the plugin is properly configured."""
+
+        required_keys = {
+            option["name"] for option in self.get_configuration_options()
+        }
+        missing = [key for key in required_keys if key not in self.settings]
+        if missing:
+            return False, f"Missing required configuration: {', '.join(sorted(missing))}"
+        return True, "Dummy plugin is configured"
+
+    # ------------------------------------------------------------------
+    # Core functionality
+    def collect_locations(
+        self,
+        target: str,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+    ) -> List[LocationPoint]:
+        """Generate simulated :class:`LocationPoint` objects."""
+
+        base_lat = float(self.settings.get("base_latitude", 37.7749))
+        base_lon = float(self.settings.get("base_longitude", -122.4194))
+        variance = int(self.settings.get("location_variance", 100))
+        count = int(self.settings.get("location_count", 10))
+        date_range_days = int(self.settings.get("date_range_days", 30))
+
+        locations: List[LocationPoint] = []
         for _ in range(count):
-                                            lat_offset = random.uniform(-variance, variance) / 111320  # Approx meters to degrees
-                                            lon_offset = random.uniform(-variance, variance) / (111320 * math.cos(math.radians(base_lat)))
-                                            timestamp = datetime.now() - timedelta(days=random.randint(0, date_range_days))
-            
-                                            location = LocationPoint(
-                                            latitude=base_lat + lat_offset,
-                                            longitude=base_lon + lon_offset,
-                                            timestamp=timestamp,
-                                            source="DummyPlugin",
-                                            context="Simulated location"
-                                            )
-                                            locations.append(location)
-        
-        # Apply date filtering
+            lat_offset = random.uniform(-variance, variance) / 111_320
+            lon_offset = random.uniform(-variance, variance) / (
+                111_320 * math.cos(math.radians(base_lat))
+            )
+            timestamp = datetime.now() - timedelta(days=random.randint(0, date_range_days))
+            location = LocationPoint(
+                latitude=base_lat + lat_offset,
+                longitude=base_lon + lon_offset,
+                timestamp=timestamp,
+                source=self.name,
+                context=f"Simulated location for {target}",
+            )
+            locations.append(location)
+
         if date_from or date_to:
-                                                locations = [
-                                                loc for loc in locations 
-                                                if (not date_from or loc.timestamp >= date_from) and
-                                                (not date_to or loc.timestamp <= date_to)
-                                                ]
-        
-                                            return locations
-    
-    def execute(self, *args, **kwargs) -> Dict[str, Any]:
-                                                """Execute the plugin's functionality""""""'"""
-                                                logger.info(f"DummyPlugin executing with args: {args} and kwargs: {kwargs}")
-                                            return {"status": "success", "message": "DummyPlugin executed successfully"}
-    
-    def get_info(self):
-                                                """Get plugin information"""""""""""
-                                            return {
-                                            "name": self.name,
-                                            "description": self.description,
-                                            "version": self.version, 
-                                            "author": self.author
-                                            }
+            locations = [
+                loc
+                for loc in locations
+                if (date_from is None or loc.timestamp >= date_from)
+                and (date_to is None or loc.timestamp <= date_to)
+            ]
+
+        return locations
+
+    def execute(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:  # type: ignore[override]
+        """Execute the plugin and return a success payload."""
+
+        logger.info("DummyPlugin executing with args: %s kwargs: %s", args, kwargs)
+        return {"status": "success", "message": "DummyPlugin executed successfully"}
+
+    # ------------------------------------------------------------------
+    # Informational helpers
+    def get_info(self) -> Dict[str, Any]:
+        """Return metadata about the plugin."""
+
+        return {
+            "name": self.name,
+            "description": self.description,
+            "version": self.version,
+            "author": self.author,
+        }
 
     def get_requirements(self) -> List[str]:
-                                                """Get list of plugin dependencies"""""""""""
-                                            return []
-    
-    def cleanup(self) -> None:
-                                                """Clean up resources used by the plugin"""""""""""
-                                                logger.debug(f"Cleaning up {self.name}")
+        """Return the plugin's external dependencies."""
 
-# Create a Plugin class for compatibility with the plugin system
-                                                Plugin = DummyPlugin
+        return []
+
+    def cleanup(self) -> None:
+        """Clean up resources used by the plugin."""
+
+        logger.debug("Cleaning up %s", self.name)
+
+
+# Backwards compatibility for code expecting ``Plugin``
+Plugin = DummyPlugin
+
