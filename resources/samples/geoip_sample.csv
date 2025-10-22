@@ -1,0 +1,5 @@
+ip_start,ip_end,latitude,longitude,city,region,country
+8.8.8.0,8.8.8.255,37.3861,-122.0839,Mountain View,California,United States
+1.1.1.0,1.1.1.255,-33.4940,143.2104,Sydney,New South Wales,Australia
+9.9.9.0,9.9.9.255,41.5000,-81.6950,Cleveland,Ohio,United States
+208.67.222.0,208.67.222.255,37.7697,-122.3933,San Francisco,California,United States
