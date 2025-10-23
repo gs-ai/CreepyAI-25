@@ -139,7 +139,8 @@ def main():
             from app.plugins.plugin_cli import PluginCLI
 
             cli = PluginCLI()
-            cli.manager = plugin_manager  # Reuse initialised manager
+            if plugin_manager is not None:
+                cli.manager = plugin_manager  # Reuse initialised manager
             return cli.run([])
         except Exception as exc:
             logger.error("CLI mode failed: %s", exc)

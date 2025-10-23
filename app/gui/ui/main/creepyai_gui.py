@@ -14,8 +14,8 @@ from PyQt5.QtWidgets import (
     QApplication, QFileDialog, QMessageBox, QLabel, QStyle,
     QTabWidget, QPushButton, QLineEdit, QDateEdit, QFrame, QComboBox, QToolButton, QMenu
 )
-from PyQt5.QtCore import Qt, QSize, pyqtSlot, QDate, QTimer
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QSize, pyqtSlot, QDate, QTimer, QUrl
+from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from app.ui.plugin_selector import PluginSelector
@@ -57,13 +57,13 @@ class CreepyAIGUI(QMainWindow):
         # No need to add the toolbar to the layout as it's added to the main window directly
         
         # Create status bar
-        self.statusBar = QStatusBar()
-        self.setStatusBar(self.statusBar)
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
         self.status_label = QLabel("Ready")
-        self.statusBar.addWidget(self.status_label)
+        self.status_bar.addWidget(self.status_label)
         
         # Create main splitter for sidebar and map
-        self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter = QSplitter(Qt.Horizontal)  # type: ignore[attr-defined]
         main_layout.addWidget(self.main_splitter)
         
         # Create sidebar with tabs
@@ -115,7 +115,7 @@ class CreepyAIGUI(QMainWindow):
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setMovable(True)  # Allow users to move the toolbar if they want
         toolbar.setFloatable(False)  # Prevent it from being floated as a separate window
-        toolbar.setAllowedAreas(Qt.TopToolBarArea | Qt.BottomToolBarArea)  # Allow docking at top or bottom
+        toolbar.setAllowedAreas(Qt.TopToolBarArea | Qt.BottomToolBarArea)  # type: ignore[attr-defined]
         
         # Set toolbar style
         toolbar.setStyleSheet("""
@@ -279,7 +279,7 @@ class CreepyAIGUI(QMainWindow):
         self.config_button = QToolButton()
         self.config_button.setText("Configure")
         self.config_button.setIcon(self.get_icon("configure-icon.png"))
-        self.config_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.config_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)  # type: ignore[attr-defined]
         self.config_button.setPopupMode(QToolButton.MenuButtonPopup)
         self.config_button.setToolTip("Configure application settings")
         self.config_button.setStyleSheet("""
@@ -460,32 +460,36 @@ class CreepyAIGUI(QMainWindow):
         if system_icon.isNull():
             # Map of standard fallback icons
             fallbacks = {
-                "new-project-icon.png": QStyle.SP_FileIcon,
-                "open-icon.png": QStyle.SP_DirOpenIcon,
-                "save-icon.png": QStyle.SP_DialogSaveButton,
-                "export-icon.png": QStyle.SP_DialogSaveButton,
-                "import-icon.png": QStyle.SP_DialogOpenButton,
-                "configure-icon.png": QStyle.SP_FileDialogDetailedView,
-                "help-icon.png": QStyle.SP_DialogHelpButton,
-                "about-icon.png": QStyle.SP_MessageBoxInformation,
-                "refresh-icon.png": QStyle.SP_BrowserReload
+                "new-project-icon.png": QStyle.SP_FileIcon,  # type: ignore[attr-defined]
+                "open-icon.png": QStyle.SP_DirOpenIcon,  # type: ignore[attr-defined]
+                "save-icon.png": QStyle.SP_DialogSaveButton,  # type: ignore[attr-defined]
+                "export-icon.png": QStyle.SP_DialogSaveButton,  # type: ignore[attr-defined]
+                "import-icon.png": QStyle.SP_DialogOpenButton,  # type: ignore[attr-defined]
+                "configure-icon.png": QStyle.SP_FileDialogDetailedView,  # type: ignore[attr-defined]
+                "help-icon.png": QStyle.SP_DialogHelpButton,  # type: ignore[attr-defined]
+                "about-icon.png": QStyle.SP_MessageBoxInformation,  # type: ignore[attr-defined]
+                "refresh-icon.png": QStyle.SP_BrowserReload  # type: ignore[attr-defined]
             }
             
             # Get style from application
-            style = QApplication.style()
+            app = QApplication.instance()
+            style = app.style() if app else None  # type: ignore[attr-defined]
             
             # Use appropriate standard icon or default
-            if icon_name in fallbacks:
-                return style.standardIcon(fallbacks[icon_name])
-            else:
-                return style.standardIcon(QStyle.SP_TitleBarMenuButton)
+            if style:
+                if icon_name in fallbacks:
+                    return style.standardIcon(fallbacks[icon_name])  # type: ignore[attr-defined]
+                else:
+                    return style.standardIcon(QStyle.SP_TitleBarMenuButton)  # type: ignore[attr-defined]
+            # Fallback to empty icon if no style available
+            return QIcon()
         
         return system_icon
 
     def import_data(self):
         """Import data from various sources"""
         try:
-            from app.gui.ui.dialogs.import_dialog import ImportWizard
+            from app.gui.ui.dialogs.import_dialog import ImportWizard  # type: ignore[import]
             wizard = ImportWizard(self)
             
             # Connect signal from wizard to handle results
@@ -501,7 +505,7 @@ class CreepyAIGUI(QMainWindow):
     def view_imported_results(self):
         """View results from import operation"""
         self.refresh_map()
-        self.statusBar.showMessage("Showing imported data on map", 3000)
+        self.status_bar.showMessage("Showing imported data on map", 3000)
 
     def show_help(self):
         """Show the application help documentation"""
@@ -526,7 +530,7 @@ class CreepyAIGUI(QMainWindow):
 
     def show_preferences_dialog(self):
         """Show the application preferences dialog"""
-        from app.gui.ui.dialogs.preferences_dialog import PreferencesDialog
+        from app.gui.ui.dialogs.preferences_dialog import PreferencesDialog  # type: ignore[import]
         dialog = PreferencesDialog(self)
         dialog.exec_()
         # Apply any changes that might affect the UI
@@ -534,17 +538,18 @@ class CreepyAIGUI(QMainWindow):
     
     def show_plugin_config_dialog(self):
         """Show the plugin configuration dialog"""
-        from app.gui.ui.dialogs.plugin_config_dialog import PluginConfigDialog
+        from app.gui.ui.dialogs.plugin_config_dialog import PluginConfigDialog  # type: ignore[import]
         dialog = PluginConfigDialog(self.plugin_manager, self)
         dialog.exec_()
     
     def show_map_settings(self):
         """Show map settings dialog"""
-        from app.gui.ui.dialogs.map_settings_dialog import MapSettingsDialog
+        from app.gui.ui.dialogs.map_settings_dialog import MapSettingsDialog  # type: ignore[import]
         dialog = MapSettingsDialog(self.map_controller, self)
         if dialog.exec_():
             # Apply any map setting changes immediately
-            self.map_controller.apply_settings()
+            if self.map_controller and hasattr(self.map_controller, 'apply_settings'):
+                self.map_controller.apply_settings()
     
     def change_theme(self, theme_name):
         """Change the application theme"""
@@ -595,7 +600,7 @@ class CreepyAIGUI(QMainWindow):
         # Enhanced search button with icon and animation
         search_button = QPushButton("Search")
         search_button.setIcon(QIcon(os.path.join(self.icon_path, "search-icon.png")))
-        search_button.setCursor(Qt.PointingHandCursor)
+        search_button.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         search_button.setStyleSheet("""
             QPushButton {
                 background-color: #4a86e8;
@@ -634,7 +639,7 @@ class CreepyAIGUI(QMainWindow):
         self.map_search_btn.setCheckable(True)
         self.map_search_btn.setChecked(True)
         self.map_search_btn.setToolTip("Search for locations on the map")
-        self.map_search_btn.setCursor(Qt.PointingHandCursor)
+        self.map_search_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         self.map_search_btn.setStyleSheet(self._get_toggle_button_style())
         self.map_search_btn.clicked.connect(self.toggle_search_type)
         search_type_layout.addWidget(self.map_search_btn)
@@ -644,7 +649,7 @@ class CreepyAIGUI(QMainWindow):
         self.target_search_btn.setIcon(QIcon(os.path.join(self.icon_path, "target-icon.png")))
         self.target_search_btn.setCheckable(True)
         self.target_search_btn.setToolTip("Search for targets by name")
-        self.target_search_btn.setCursor(Qt.PointingHandCursor)
+        self.target_search_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         self.target_search_btn.setStyleSheet(self._get_toggle_button_style())
         self.target_search_btn.clicked.connect(self.toggle_search_type)
         search_type_layout.addWidget(self.target_search_btn)
@@ -676,7 +681,7 @@ class CreepyAIGUI(QMainWindow):
         clear_results_btn = QPushButton("Clear Results")
         clear_results_btn.setIcon(QIcon(os.path.join(self.icon_path, "clear-icon.png")))
         clear_results_btn.setToolTip("Clear search results and reset map")
-        clear_results_btn.setCursor(Qt.PointingHandCursor)
+        clear_results_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         clear_results_btn.setStyleSheet(self._get_secondary_button_style())
         clear_results_btn.clicked.connect(self.clear_search_results)
         actions_layout.addWidget(clear_results_btn)
@@ -685,7 +690,7 @@ class CreepyAIGUI(QMainWindow):
         export_results_btn = QPushButton("Export Results")
         export_results_btn.setIcon(QIcon(os.path.join(self.icon_path, "export-results-icon.png")))
         export_results_btn.setToolTip("Export search results to a file")
-        export_results_btn.setCursor(Qt.PointingHandCursor)
+        export_results_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         export_results_btn.setStyleSheet(self._get_secondary_button_style())
         export_results_btn.clicked.connect(self.export_search_results)
         actions_layout.addWidget(export_results_btn)
@@ -774,7 +779,7 @@ class CreepyAIGUI(QMainWindow):
         apply_btn = QPushButton("Apply Filters")
         apply_btn.setIcon(QIcon(os.path.join(self.icon_path, "filter-icon.png")))
         apply_btn.setToolTip("Apply date filters to the map")
-        apply_btn.setCursor(Qt.PointingHandCursor)
+        apply_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         apply_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4a86e8;
@@ -851,6 +856,8 @@ class CreepyAIGUI(QMainWindow):
         try:
             if self.map_search_btn.isChecked():
                 # Search on map
+                if not self.map_controller:
+                    raise RuntimeError("Map is not ready yet")
                 count = self.map_controller.search_map(search_term)
                 if count > 0:
                     self.results_label.setText(f"✅ Found {count} locations matching '{search_term}'")
@@ -860,6 +867,8 @@ class CreepyAIGUI(QMainWindow):
                     self.results_label.setStyleSheet("QLabel { background-color: #d1ecf1; color: #0c5460; border-radius: 3px; padding: 8px; }")
             else:
                 # Search for targets
+                if not self.map_controller:
+                    raise RuntimeError("Map is not ready yet")
                 self.search_results = self.map_controller.search_for_targets(search_term)
                 if self.search_results:
                     self.results_label.setText(f"✅ Found {len(self.search_results)} potential targets matching '{search_term}'")
@@ -879,7 +888,8 @@ class CreepyAIGUI(QMainWindow):
         self.search_input.clear()
         self.results_label.setText("Ready for new search")
         self.results_label.setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 3px; padding: 8px; }")
-        self.map_controller.clear_search()
+        if self.map_controller:
+            self.map_controller.clear_search()
         self.search_results = []
         self.status_label.setText("Search results cleared")
         
@@ -892,7 +902,8 @@ class CreepyAIGUI(QMainWindow):
 
     def export_search_results(self):
         """Export search results to a file with improved error handling and feedback"""
-        has_results = bool(self.search_results) if self.target_search_btn.isChecked() else bool(self.map_controller.markers)
+        marker_details = getattr(self.map_controller, 'marker_details', []) if self.map_controller else []
+        has_results = bool(self.search_results) if self.target_search_btn.isChecked() else bool(marker_details)
         
         if not has_results:
             QMessageBox.information(self, "Export Results", "No results to export")
@@ -925,7 +936,7 @@ class CreepyAIGUI(QMainWindow):
             if filename.endswith('.json'):
                 with open(filename, 'w', encoding='utf-8') as f:
                     if self.map_search_btn.isChecked():
-                        json.dump(self.map_controller.markers, f, indent=2)
+                        json.dump(marker_details, f, indent=2)
                     else:
                         json.dump(self.search_results, f, indent=2)
             elif filename.endswith('.csv'):
@@ -934,9 +945,9 @@ class CreepyAIGUI(QMainWindow):
                         # Export map markers
                         writer = csv.writer(f)
                         writer.writerow(['Latitude', 'Longitude', 'Title', 'Content', 'Timestamp', 'Source'])
-                        for marker in self.map_controller.markers:
+                        for marker in marker_details:
                             writer.writerow([
-                                marker['lat'], marker['lng'], 
+                                marker.get('lat', ''), marker.get('lng', ''), 
                                 marker.get('title', ''), 
                                 marker.get('content', ''), 
                                 marker.get('timestamp', ''), 
@@ -954,7 +965,7 @@ class CreepyAIGUI(QMainWindow):
                             ])
             elif filename.endswith('.kml') and self.map_search_btn.isChecked():
                 # Export as KML only for map markers
-                self._export_as_kml(filename, self.map_controller.markers)
+                self._export_as_kml(filename, marker_details)
             else:
                 raise ValueError(f"Unsupported file format: {os.path.splitext(filename)[1]}")
             
@@ -971,7 +982,7 @@ class CreepyAIGUI(QMainWindow):
     def _export_as_kml(self, filename: str, markers: list) -> None:
         """Export map markers as KML file"""
         try:
-            import simplekml
+            import simplekml  # type: ignore[import]
             kml = simplekml.Kml()
             
             # Add markers as placemarks
@@ -1004,20 +1015,22 @@ class CreepyAIGUI(QMainWindow):
         to_datetime = datetime.datetime.combine(to_date, datetime.time.max)
         
         # Update map controller date range
-        self.map_controller.set_date_range(from_datetime, to_datetime)
+        if self.map_controller:
+            self.map_controller.set_date_range(from_datetime, to_datetime)
         
         # Update status
         self.status_label.setText(f"Filters applied: {from_date} to {to_date}")
     
     def refresh_map(self):
         """Refresh map data"""
-        self.map_controller.update_map_markers()
+        if self.map_controller:
+            self.map_controller.update_map_markers()
         self.status_label.setText("Map refreshed")
     
     def new_project(self):
         """Create a new project"""
         # Implementation would clear current data and start fresh
-        self.statusBar.showMessage("New project created", 3000)
+        self.status_bar.showMessage("New project created", 3000)
     
     def open_project(self):
         """Open an existing project"""
@@ -1026,7 +1039,7 @@ class CreepyAIGUI(QMainWindow):
             self, "Open Project", "", "CreepyAI Projects (*.cai);;All Files (*)"
         )
         if filename:
-            self.statusBar.showMessage(f"Opened project: {filename}", 3000)
+            self.status_bar.showMessage(f"Opened project: {filename}", 3000)
     
     def save_project(self):
         """Save the current project"""
@@ -1035,7 +1048,7 @@ class CreepyAIGUI(QMainWindow):
             self, "Save Project", "", "CreepyAI Projects (*.cai);;All Files (*)"
         )
         if filename:
-            self.statusBar.showMessage(f"Project saved: {filename}", 3000)
+            self.status_bar.showMessage(f"Project saved: {filename}", 3000)
     
     def export_data(self):
         """Export data to file"""
@@ -1044,7 +1057,7 @@ class CreepyAIGUI(QMainWindow):
             self, "Export Data", "", "JSON Files (*.json);;CSV Files (*.csv);;All Files (*)"
         )
         if filename:
-            self.statusBar.showMessage(f"Data exported to: {filename}", 3000)
+            self.status_bar.showMessage(f"Data exported to: {filename}", 3000)
     
     def change_map_layer(self, layer_name):
         """Change the map base layer"""

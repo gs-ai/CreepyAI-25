@@ -50,12 +50,15 @@ class MapController(QObject):
         self.web_view = web_view
         self.location_model = None
         self.markers = {}  # Dictionary of marker IDs to location IDs
+        self.marker_details: List[Dict[str, Any]] = []  # Details for export (lat/lng/title,...)
         self.selected_marker_id = None
         self.marker_counter = 0
         self.web_channel = QWebChannel()
         
         # Set up web channel
-        self.web_view.page().setWebChannel(self.web_channel)
+        page_obj = self.web_view.page()
+        if page_obj is not None:  # Guard for type checker
+            page_obj.setWebChannel(self.web_channel)
         self.web_channel.registerObject("mapController", self)
         
         # Set up map
@@ -118,7 +121,10 @@ class MapController(QObject):
             
             # Connect JavaScript callbacks
             page = self.web_view.page()
-            page.javaScriptConsoleMessage = self._handle_js_console
+            try:
+                page.javaScriptConsoleMessage = self._handle_js_console  # type: ignore[attr-defined]
+            except Exception:
+                pass
             
             logger.info("Map setup complete")
             
@@ -190,7 +196,9 @@ class MapController(QObject):
         window.creepyAI.mapReady = true;
         """
         
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def set_location_model(self, model: LocationDataModel) -> None:
         """
@@ -275,7 +283,14 @@ class MapController(QObject):
             window.creepyAI.addMarker({json.dumps(marker_options)});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
+        # Track details for export
+        try:
+            self.marker_details.append(marker_options)
+        except Exception:
+            pass
     
     def remove_location_marker(self, location_id: str) -> None:
         """
@@ -302,7 +317,9 @@ class MapController(QObject):
                 window.creepyAI.removeMarker("{marker_id}");
             }}
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
             
             # Remove from our markers dictionary
             del self.markers[marker_id]
@@ -341,7 +358,9 @@ class MapController(QObject):
                 window.creepyAI.updateMarker({json.dumps(marker_options)});
             }}
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
     
     def clear_markers(self) -> None:
         """Clear all markers from the map"""
@@ -354,10 +373,13 @@ class MapController(QObject):
             window.creepyAI.clearMarkers();
         }
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
         
         # Clear our markers dictionary
         self.markers = {}
+        self.marker_details = []
         self.marker_counter = 0
     
     def set_view(self, lat: float, lng: float, zoom: int = 14) -> None:
@@ -378,7 +400,9 @@ class MapController(QObject):
             window.creepyAI.setView({lat}, {lng}, {zoom});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def fit_bounds(self) -> None:
         """Fit the map to show all markers"""
@@ -391,7 +415,9 @@ class MapController(QObject):
             window.creepyAI.fitBounds();
         }
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def select_marker(self, location_id: str) -> None:
         """
@@ -418,7 +444,9 @@ class MapController(QObject):
                 window.creepyAI.selectMarker("{marker_id}");
             }}
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
             
             # Store selected marker ID
             self.selected_marker_id = marker_id
@@ -434,7 +462,9 @@ class MapController(QObject):
             window.creepyAI.deselectMarker();
         }
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
         
         # Clear selected marker ID
         self.selected_marker_id = None
@@ -458,7 +488,9 @@ class MapController(QObject):
             window.creepyAI.setMapLayer("{layer_name}");
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def toggle_heatmap(self, enabled: bool) -> None:
         """
@@ -476,7 +508,9 @@ class MapController(QObject):
             window.creepyAI.toggleHeatmap({str(enabled).lower()});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def toggle_clustering(self, enabled: bool) -> None:
         """
@@ -494,7 +528,9 @@ class MapController(QObject):
             window.creepyAI.toggleClustering({str(enabled).lower()});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def show_path(self, show: bool = True, 
                  location_ids: Optional[List[str]] = None,
@@ -518,18 +554,20 @@ class MapController(QObject):
                 window.creepyAI.hidePath();
             }
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
             return
         
         # Get locations to include in path
         locations = []
         if location_ids:
             for location_id in location_ids:
-                location = self.location_model.get_location(location_id)
+                location = self.location_model.get_location(location_id) if self.location_model else None
                 if location:
                     locations.append(location)
         else:
-            locations = self.location_model.get_all_locations()
+            locations = self.location_model.get_all_locations() if self.location_model else []
         
         # Sort locations by timestamp (if available)
         locations = sorted(
@@ -553,7 +591,9 @@ class MapController(QObject):
             window.creepyAI.showPath({json.dumps(path_data)}, "{color}");
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
 
     def update_map_markers(self) -> None:
         """Placeholder: refresh marker display based on model and filters."""
