@@ -22,6 +22,7 @@ from app.ui.plugin_selector import PluginSelector
 from app.controllers.map_controller import MapController
 from app.plugins.plugin_manager import PluginManager
 from app.plugins.base_plugin import LocationPoint
+from app.models.location_data import Location
 from app.plugin_registry import instantiate_plugins
 
 logger = logging.getLogger(__name__)
@@ -871,6 +872,8 @@ class CreepyAIGUI(QMainWindow):
                 if self.search_results:
                     self.results_label.setText(f"✅ Found {len(self.search_results)} potential targets matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d4edda; color: #155724; border-radius: 3px; padding: 8px; }")
+                    # Best-effort: plot locations for this term from enabled plugins
+                    self._plot_locations_for_term(search_term)
                 else:
                     self.results_label.setText(f"ℹ️ No targets found matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d1ecf1; color: #0c5460; border-radius: 3px; padding: 8px; }")
@@ -939,6 +942,42 @@ class CreepyAIGUI(QMainWindow):
             except Exception as e:
                 logger.warning(f"Plugin {getattr(plugin, 'name', plugin)} search error: {e}")
         return results
+
+    def _plot_locations_for_term(self, term: str, max_points: int = 500) -> None:
+        """Collect and plot locations for the given term from enabled plugins."""
+        if not self.map_controller:
+            return
+        total = 0
+        seen = set()
+        for plugin in self._get_enabled_plugins():
+            try:
+                if hasattr(plugin, 'collect_locations'):
+                    points = plugin.collect_locations(term, None, None) or []
+                    for pt in points:
+                        # Deduplicate by rounded coordinates and context
+                        key = (round(getattr(pt, 'latitude', 0.0), 6),
+                               round(getattr(pt, 'longitude', 0.0), 6),
+                               getattr(pt, 'context', ''))
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        loc = Location.from_location_point(pt)
+                        self.map_controller.add_location_marker(loc)
+                        total += 1
+                        if total >= max_points:
+                            break
+            except Exception as e:
+                logger.warning(f"Plugin {getattr(plugin, 'name', plugin)} collect error: {e}")
+            if total >= max_points:
+                break
+        try:
+            if total > 0:
+                # Center map to show markers
+                self.map_controller.fit_bounds()
+                # Update status label
+                self.status_label.setText(f"Plotted {total} locations for '{term}'")
+        except Exception:
+            pass
 
     def export_search_results(self):
         """Export search results to a file with improved error handling and feedback"""
