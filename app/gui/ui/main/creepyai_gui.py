@@ -11,17 +11,18 @@ from typing import Optional, Dict, Any, List
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QSplitter, QAction, QToolBar, QStatusBar, 
-    QApplication, QFileDialog, QMessageBox, QLabel,
+    QApplication, QFileDialog, QMessageBox, QLabel, QStyle,
     QTabWidget, QPushButton, QLineEdit, QDateEdit, QFrame, QComboBox, QToolButton, QMenu
 )
-from PyQt5.QtCore import Qt, QSize, pyqtSlot, QDate, QTimer
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QSize, pyqtSlot, QDate, QTimer, QUrl
+from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from app.ui.plugin_selector import PluginSelector
 from app.controllers.map_controller import MapController
 from app.plugins.plugin_manager import PluginManager
 from app.plugins.base_plugin import LocationPoint
+from app.models.location_data import Location
 from app.plugin_registry import instantiate_plugins
 
 logger = logging.getLogger(__name__)
@@ -52,18 +53,18 @@ class CreepyAIGUI(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         
-        # Create and initialize the toolbar
+        # Create and initialize the toolbar (note: map widgets are created below)
         self.toolbar = self.create_toolbar()
         # No need to add the toolbar to the layout as it's added to the main window directly
         
         # Create status bar
-        self.statusBar = QStatusBar()
-        self.setStatusBar(self.statusBar)
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
         self.status_label = QLabel("Ready")
-        self.statusBar.addWidget(self.status_label)
+        self.status_bar.addWidget(self.status_label)
         
         # Create main splitter for sidebar and map
-        self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter = QSplitter(Qt.Horizontal)  # type: ignore[attr-defined]
         main_layout.addWidget(self.main_splitter)
         
         # Create sidebar with tabs
@@ -98,6 +99,12 @@ class CreepyAIGUI(QMainWindow):
         
         # Initialize map controller
         self.map_controller = MapController(self.map_widget)
+
+        # Now that the map controller exists, update toolbar map layer combo
+        try:
+            self._populate_map_layer_combo_from_controller()
+        except Exception as e:
+            logger.warning(f"Could not populate map layer combo from controller: {e}")
         
         # Connect plugin selector to map controller
         self.plugin_selector.connect_to_map_controller(self.map_controller)
@@ -109,20 +116,20 @@ class CreepyAIGUI(QMainWindow):
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setMovable(True)  # Allow users to move the toolbar if they want
         toolbar.setFloatable(False)  # Prevent it from being floated as a separate window
-        toolbar.setAllowedAreas(Qt.TopToolBarArea | Qt.BottomToolBarArea)  # Allow docking at top or bottom
+        toolbar.setAllowedAreas(Qt.TopToolBarArea | Qt.BottomToolBarArea)  # type: ignore[attr-defined]
         
         # Set toolbar style
         toolbar.setStyleSheet("""
             QToolBar {
-                border-bottom: 1px solid #cccccc;
+                border-bottom: 1px solid #444444;
                 background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                                 stop: 0 #f8f8f8, stop: 1 #eeeeee);
+                                                 stop: 0 #3a3a3a, stop: 1 #2d2d2d);
                 spacing: 2px;
                 padding: 2px;
             }
             QToolBar::separator {
                 width: 1px;
-                background-color: #cccccc;
+                background-color: #555555;
                 margin: 4px 8px;
             }
         """)
@@ -173,25 +180,40 @@ class CreepyAIGUI(QMainWindow):
         self.map_layer_combo = QComboBox()
         self.map_layer_combo.setToolTip("Select map type - also available via the map control panel")
         self.map_layer_combo.setStyleSheet("""
-            QComboBox {
-                min-width: 150px;
-                padding: 3px 10px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: #f8f8f8;
-            }
-            QComboBox::drop-down {
-                width: 20px;
-            }
-        """)
+                QComboBox {
+                    min-width: 150px;
+                    padding: 3px 10px;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    background-color: #3c3c3c;
+                    color: #e1e1e1;
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #2b2b2b;
+                    color: #e1e1e1;
+                    selection-background-color: #007ACC;
+                    selection-color: #ffffff;
+                }
+                QComboBox::drop-down {
+                    width: 20px;
+                }
+            """)
         
-        # Make sure we initialize the map controller before accessing it
-        if not hasattr(self, 'map_controller') or self.map_controller is None:
-            self.map_controller = MapController(self.map_widget)
-        
+        # Try to populate from controller if available; otherwise, use defaults
         try:
-            self.map_layer_combo.addItems(self.map_controller.get_available_layers())
-            self.map_layer_combo.setCurrentText(self.map_controller.get_current_layer())
+            if hasattr(self, 'map_controller') and self.map_controller is not None:
+                self.map_layer_combo.addItems(self.map_controller.get_available_layers())
+                # Prefer Dark Mode by default when available
+                preferred = "Dark Mode"
+                current = self.map_controller.get_current_layer() if hasattr(self.map_controller, 'get_current_layer') else None
+                if preferred in [self.map_layer_combo.itemText(i) for i in range(self.map_layer_combo.count())]:
+                    self.map_layer_combo.setCurrentText(preferred)
+                    # Apply to map immediately
+                    self.change_map_layer(preferred)
+                elif current:
+                    self.map_layer_combo.setCurrentText(current)
+            else:
+                raise RuntimeError("Map controller not yet initialized")
         except Exception as e:
             logger.warning(f"Could not initialize map layers: {e}")
             self.map_layer_combo.addItems(["Street Map", "Satellite", "Terrain", "Dark Mode"])
@@ -258,28 +280,30 @@ class CreepyAIGUI(QMainWindow):
         self.config_button = QToolButton()
         self.config_button.setText("Configure")
         self.config_button.setIcon(self.get_icon("configure-icon.png"))
-        self.config_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.config_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)  # type: ignore[attr-defined]
         self.config_button.setPopupMode(QToolButton.MenuButtonPopup)
         self.config_button.setToolTip("Configure application settings")
         self.config_button.setStyleSheet("""
-            QToolButton {
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: #f5f5f5;
-                padding: 3px 10px;
-            }
-            QToolButton:hover {
-                background-color: #e0e0e0;
-                border-color: #999;
-            }
-            QToolButton:pressed {
-                background-color: #d0d0d0;
-            }
-            QToolButton::menu-button {
-                width: 16px;
-                border-left: 1px solid #ccc;
-            }
-        """)
+                QToolButton {
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    background-color: #3a3a3a;
+                    color: #e1e1e1;
+                    padding: 3px 10px;
+                }
+                QToolButton:hover {
+                    background-color: #4a4a4a;
+                    border-color: #777777;
+                }
+                QToolButton:pressed {
+                    background-color: #007ACC;
+                    color: #ffffff;
+                }
+                QToolButton::menu-button {
+                    width: 16px;
+                    border-left: 1px solid #555555;
+                }
+            """)
         
         # Create dropdown menu for configuration options
         config_menu = QMenu()
@@ -382,6 +406,22 @@ class CreepyAIGUI(QMainWindow):
         self.addToolBar(toolbar)
         return toolbar
 
+    def _populate_map_layer_combo_from_controller(self):
+        """Populate the map layer combo box from the map controller safely."""
+        if not hasattr(self, 'map_layer_combo') or self.map_layer_combo is None:
+            return
+        if not hasattr(self, 'map_controller') or self.map_controller is None:
+            return
+        # Reset and populate
+        self.map_layer_combo.clear()
+        layers = self.map_controller.get_available_layers()
+        self.map_layer_combo.addItems(layers)
+        try:
+            self.map_layer_combo.setCurrentText(self.map_controller.get_current_layer())
+        except Exception:
+            # If current layer isn't in list yet, ignore
+            pass
+
     def create_action(self, text, icon_name, tooltip, shortcut=None, slot=None):
         """Create a QAction with the specified properties and connect to a slot"""
         action = QAction(text, self)
@@ -421,32 +461,36 @@ class CreepyAIGUI(QMainWindow):
         if system_icon.isNull():
             # Map of standard fallback icons
             fallbacks = {
-                "new-project-icon.png": QStyle.SP_FileIcon,
-                "open-icon.png": QStyle.SP_DirOpenIcon,
-                "save-icon.png": QStyle.SP_DialogSaveButton,
-                "export-icon.png": QStyle.SP_DialogSaveButton,
-                "import-icon.png": QStyle.SP_DialogOpenButton,
-                "configure-icon.png": QStyle.SP_FileDialogDetailedView,
-                "help-icon.png": QStyle.SP_DialogHelpButton,
-                "about-icon.png": QStyle.SP_MessageBoxInformation,
-                "refresh-icon.png": QStyle.SP_BrowserReload
+                "new-project-icon.png": QStyle.SP_FileIcon,  # type: ignore[attr-defined]
+                "open-icon.png": QStyle.SP_DirOpenIcon,  # type: ignore[attr-defined]
+                "save-icon.png": QStyle.SP_DialogSaveButton,  # type: ignore[attr-defined]
+                "export-icon.png": QStyle.SP_DialogSaveButton,  # type: ignore[attr-defined]
+                "import-icon.png": QStyle.SP_DialogOpenButton,  # type: ignore[attr-defined]
+                "configure-icon.png": QStyle.SP_FileDialogDetailedView,  # type: ignore[attr-defined]
+                "help-icon.png": QStyle.SP_DialogHelpButton,  # type: ignore[attr-defined]
+                "about-icon.png": QStyle.SP_MessageBoxInformation,  # type: ignore[attr-defined]
+                "refresh-icon.png": QStyle.SP_BrowserReload  # type: ignore[attr-defined]
             }
             
             # Get style from application
-            style = QApplication.style()
+            app = QApplication.instance()
+            style = app.style() if app else None  # type: ignore[attr-defined]
             
             # Use appropriate standard icon or default
-            if icon_name in fallbacks:
-                return style.standardIcon(fallbacks[icon_name])
-            else:
-                return style.standardIcon(QStyle.SP_TitleBarMenuButton)
+            if style:
+                if icon_name in fallbacks:
+                    return style.standardIcon(fallbacks[icon_name])  # type: ignore[attr-defined]
+                else:
+                    return style.standardIcon(QStyle.SP_TitleBarMenuButton)  # type: ignore[attr-defined]
+            # Fallback to empty icon if no style available
+            return QIcon()
         
         return system_icon
 
     def import_data(self):
         """Import data from various sources"""
         try:
-            from app.gui.ui.dialogs.import_dialog import ImportWizard
+            from app.gui.ui.dialogs.import_dialog import ImportWizard  # type: ignore[import]
             wizard = ImportWizard(self)
             
             # Connect signal from wizard to handle results
@@ -462,7 +506,7 @@ class CreepyAIGUI(QMainWindow):
     def view_imported_results(self):
         """View results from import operation"""
         self.refresh_map()
-        self.statusBar.showMessage("Showing imported data on map", 3000)
+        self.status_bar.showMessage("Showing imported data on map", 3000)
 
     def show_help(self):
         """Show the application help documentation"""
@@ -487,7 +531,7 @@ class CreepyAIGUI(QMainWindow):
 
     def show_preferences_dialog(self):
         """Show the application preferences dialog"""
-        from app.gui.ui.dialogs.preferences_dialog import PreferencesDialog
+        from app.gui.ui.dialogs.preferences_dialog import PreferencesDialog  # type: ignore[import]
         dialog = PreferencesDialog(self)
         dialog.exec_()
         # Apply any changes that might affect the UI
@@ -495,17 +539,18 @@ class CreepyAIGUI(QMainWindow):
     
     def show_plugin_config_dialog(self):
         """Show the plugin configuration dialog"""
-        from app.gui.ui.dialogs.plugin_config_dialog import PluginConfigDialog
+        from app.gui.ui.dialogs.plugin_config_dialog import PluginConfigDialog  # type: ignore[import]
         dialog = PluginConfigDialog(self.plugin_manager, self)
         dialog.exec_()
     
     def show_map_settings(self):
         """Show map settings dialog"""
-        from app.gui.ui.dialogs.map_settings_dialog import MapSettingsDialog
+        from app.gui.ui.dialogs.map_settings_dialog import MapSettingsDialog  # type: ignore[import]
         dialog = MapSettingsDialog(self.map_controller, self)
         if dialog.exec_():
             # Apply any map setting changes immediately
-            self.map_controller.apply_settings()
+            if self.map_controller and hasattr(self.map_controller, 'apply_settings'):
+                self.map_controller.apply_settings()
     
     def change_theme(self, theme_name):
         """Change the application theme"""
@@ -528,7 +573,7 @@ class CreepyAIGUI(QMainWindow):
         
         # Search input field with better styling
         search_frame = QFrame()
-        search_frame.setStyleSheet("QFrame { background-color: #f8f8f8; border-radius: 5px; padding: 5px; }")
+        search_frame.setStyleSheet("QFrame { background-color: #1e1e1e; border-radius: 5px; padding: 5px; border: 1px solid #444444; }")
         search_layout = QHBoxLayout(search_frame)
         search_layout.setContentsMargins(5, 5, 5, 5)
         
@@ -536,13 +581,17 @@ class CreepyAIGUI(QMainWindow):
         self.search_input.setPlaceholderText("Search locations or targets...")
         self.search_input.setStyleSheet("""
             QLineEdit {
-                border: 1px solid #ccc;
+                border: 1px solid #555555;
                 border-radius: 3px;
                 padding: 5px;
-                background: white;
+                background: #2b2b2b;
+                color: #e1e1e1;
             }
             QLineEdit:focus {
                 border-color: #4a86e8;
+            }
+            QLineEdit::placeholder {
+                color: #b0b0b0;
             }
         """)
         # Add Enter key support
@@ -552,7 +601,7 @@ class CreepyAIGUI(QMainWindow):
         # Enhanced search button with icon and animation
         search_button = QPushButton("Search")
         search_button.setIcon(QIcon(os.path.join(self.icon_path, "search-icon.png")))
-        search_button.setCursor(Qt.PointingHandCursor)
+        search_button.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         search_button.setStyleSheet("""
             QPushButton {
                 background-color: #4a86e8;
@@ -591,7 +640,7 @@ class CreepyAIGUI(QMainWindow):
         self.map_search_btn.setCheckable(True)
         self.map_search_btn.setChecked(True)
         self.map_search_btn.setToolTip("Search for locations on the map")
-        self.map_search_btn.setCursor(Qt.PointingHandCursor)
+        self.map_search_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         self.map_search_btn.setStyleSheet(self._get_toggle_button_style())
         self.map_search_btn.clicked.connect(self.toggle_search_type)
         search_type_layout.addWidget(self.map_search_btn)
@@ -601,7 +650,7 @@ class CreepyAIGUI(QMainWindow):
         self.target_search_btn.setIcon(QIcon(os.path.join(self.icon_path, "target-icon.png")))
         self.target_search_btn.setCheckable(True)
         self.target_search_btn.setToolTip("Search for targets by name")
-        self.target_search_btn.setCursor(Qt.PointingHandCursor)
+        self.target_search_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         self.target_search_btn.setStyleSheet(self._get_toggle_button_style())
         self.target_search_btn.clicked.connect(self.toggle_search_type)
         search_type_layout.addWidget(self.target_search_btn)
@@ -612,10 +661,12 @@ class CreepyAIGUI(QMainWindow):
         self.results_label = QLabel("Enter a search term above to find locations or targets")
         self.results_label.setStyleSheet("""
             QLabel {
-                background-color: #f0f0f0;
+                background-color: #1e1e1e;
+                color: #e1e1e1;
                 border-radius: 3px;
                 padding: 8px;
                 margin-top: 10px;
+                border: 1px solid #444444;
             }
         """)
         self.results_label.setWordWrap(True)
@@ -631,7 +682,7 @@ class CreepyAIGUI(QMainWindow):
         clear_results_btn = QPushButton("Clear Results")
         clear_results_btn.setIcon(QIcon(os.path.join(self.icon_path, "clear-icon.png")))
         clear_results_btn.setToolTip("Clear search results and reset map")
-        clear_results_btn.setCursor(Qt.PointingHandCursor)
+        clear_results_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         clear_results_btn.setStyleSheet(self._get_secondary_button_style())
         clear_results_btn.clicked.connect(self.clear_search_results)
         actions_layout.addWidget(clear_results_btn)
@@ -640,7 +691,7 @@ class CreepyAIGUI(QMainWindow):
         export_results_btn = QPushButton("Export Results")
         export_results_btn.setIcon(QIcon(os.path.join(self.icon_path, "export-results-icon.png")))
         export_results_btn.setToolTip("Export search results to a file")
-        export_results_btn.setCursor(Qt.PointingHandCursor)
+        export_results_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         export_results_btn.setStyleSheet(self._get_secondary_button_style())
         export_results_btn.clicked.connect(self.export_search_results)
         actions_layout.addWidget(export_results_btn)
@@ -659,7 +710,7 @@ class CreepyAIGUI(QMainWindow):
         
         # Date range filter with improved styling
         date_frame = QFrame()
-        date_frame.setStyleSheet("QFrame { background-color: #f8f8f8; border-radius: 5px; padding: 10px; }")
+        date_frame.setStyleSheet("QFrame { background-color: #1e1e1e; border-radius: 5px; padding: 10px; border: 1px solid #444444; }")
         date_layout = QVBoxLayout(date_frame)
         
         # Add a title with better styling
@@ -681,10 +732,11 @@ class CreepyAIGUI(QMainWindow):
         self.from_date.setDate(QDate.currentDate().addYears(-1))
         self.from_date.setStyleSheet("""
             QDateEdit {
-                border: 1px solid #ccc;
+                border: 1px solid #555555;
                 border-radius: 3px;
                 padding: 4px;
-                background: white;
+                background: #2b2b2b;
+                color: #e1e1e1;
             }
             QDateEdit::drop-down {
                 subcontrol-origin: padding;
@@ -709,10 +761,11 @@ class CreepyAIGUI(QMainWindow):
         self.to_date.setDate(QDate.currentDate())
         self.to_date.setStyleSheet("""
             QDateEdit {
-                border: 1px solid #ccc;
+                border: 1px solid #555555;
                 border-radius: 3px;
                 padding: 4px;
-                background: white;
+                background: #2b2b2b;
+                color: #e1e1e1;
             }
             QDateEdit::drop-down {
                 subcontrol-origin: padding;
@@ -727,7 +780,7 @@ class CreepyAIGUI(QMainWindow):
         apply_btn = QPushButton("Apply Filters")
         apply_btn.setIcon(QIcon(os.path.join(self.icon_path, "filter-icon.png")))
         apply_btn.setToolTip("Apply date filters to the map")
-        apply_btn.setCursor(Qt.PointingHandCursor)
+        apply_btn.setCursor(Qt.PointingHandCursor)  # type: ignore[attr-defined]
         apply_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4a86e8;
@@ -758,8 +811,13 @@ class CreepyAIGUI(QMainWindow):
         """Connect signals and slots"""
         # Connect map controller signals
         if self.map_controller:
-            self.map_controller.markersUpdated.connect(self.update_marker_count)
-            self.map_controller.mapLayerChanged.connect(self.update_layer_selection)
+            try:
+                if hasattr(self.map_controller, 'markersUpdated'):
+                    self.map_controller.markersUpdated.connect(self.update_marker_count)
+                if hasattr(self.map_controller, 'mapLayerChanged'):
+                    self.map_controller.mapLayerChanged.connect(self.update_layer_selection)
+            except Exception as e:
+                logger.warning(f"Could not connect map controller signals: {e}")
     
     @pyqtSlot(int)
     def update_marker_count(self, count):
@@ -799,6 +857,8 @@ class CreepyAIGUI(QMainWindow):
         try:
             if self.map_search_btn.isChecked():
                 # Search on map
+                if not self.map_controller:
+                    raise RuntimeError("Map is not ready yet")
                 count = self.map_controller.search_map(search_term)
                 if count > 0:
                     self.results_label.setText(f"✅ Found {count} locations matching '{search_term}'")
@@ -807,11 +867,13 @@ class CreepyAIGUI(QMainWindow):
                     self.results_label.setText(f"ℹ️ No locations found matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d1ecf1; color: #0c5460; border-radius: 3px; padding: 8px; }")
             else:
-                # Search for targets
-                self.search_results = self.map_controller.search_for_targets(search_term)
+                # Search for targets via enabled plugins
+                self.search_results = self._search_targets_via_plugins(search_term)
                 if self.search_results:
                     self.results_label.setText(f"✅ Found {len(self.search_results)} potential targets matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d4edda; color: #155724; border-radius: 3px; padding: 8px; }")
+                    # Best-effort: plot locations for this term from enabled plugins
+                    self._plot_locations_for_term(search_term)
                 else:
                     self.results_label.setText(f"ℹ️ No targets found matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d1ecf1; color: #0c5460; border-radius: 3px; padding: 8px; }")
@@ -827,7 +889,8 @@ class CreepyAIGUI(QMainWindow):
         self.search_input.clear()
         self.results_label.setText("Ready for new search")
         self.results_label.setStyleSheet("QLabel { background-color: #f0f0f0; border-radius: 3px; padding: 8px; }")
-        self.map_controller.clear_search()
+        if self.map_controller:
+            self.map_controller.clear_search()
         self.search_results = []
         self.status_label.setText("Search results cleared")
         
@@ -838,9 +901,88 @@ class CreepyAIGUI(QMainWindow):
         # Reset to original style after brief delay
         QTimer.singleShot(1500, lambda: self.status_label.setStyleSheet(original_style))
 
+    def _get_enabled_plugins(self):
+        """Return a list of enabled plugin instances from the plugin selector."""
+        enabled = []
+        try:
+            if not hasattr(self, 'plugin_selector') or not self.plugin_selector:
+                return enabled
+            for name, checkbox in getattr(self.plugin_selector, 'plugin_checkboxes', {}).items():
+                if checkbox.isChecked():
+                    # Find the plugin instance with this name
+                    for plugin in getattr(self.plugin_selector, 'plugins', []):
+                        if getattr(plugin, 'name', None) == name:
+                            enabled.append(plugin)
+                            break
+        except Exception as e:
+            logger.warning(f"Error discovering enabled plugins: {e}")
+        return enabled
+
+    def _search_targets_via_plugins(self, term: str) -> List[Dict[str, Any]]:
+        """Aggregate target candidates across enabled plugins."""
+        results: List[Dict[str, Any]] = []
+        seen = set()
+        for plugin in self._get_enabled_plugins():
+            try:
+                if hasattr(plugin, 'search_for_targets'):
+                    candidates = plugin.search_for_targets(term) or []
+                    for c in candidates:
+                        # Normalise and de-duplicate by (pluginName,targetId)
+                        pid = str(c.get('targetId', ''))
+                        pname = c.get('pluginName') or getattr(plugin, 'name', plugin.__class__.__name__)
+                        key = (pname, pid)
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        results.append({
+                            'targetId': pid,
+                            'targetName': c.get('targetName', pid),
+                            'pluginName': pname,
+                        })
+            except Exception as e:
+                logger.warning(f"Plugin {getattr(plugin, 'name', plugin)} search error: {e}")
+        return results
+
+    def _plot_locations_for_term(self, term: str, max_points: int = 500) -> None:
+        """Collect and plot locations for the given term from enabled plugins."""
+        if not self.map_controller:
+            return
+        total = 0
+        seen = set()
+        for plugin in self._get_enabled_plugins():
+            try:
+                if hasattr(plugin, 'collect_locations'):
+                    points = plugin.collect_locations(term, None, None) or []
+                    for pt in points:
+                        # Deduplicate by rounded coordinates and context
+                        key = (round(getattr(pt, 'latitude', 0.0), 6),
+                               round(getattr(pt, 'longitude', 0.0), 6),
+                               getattr(pt, 'context', ''))
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        loc = Location.from_location_point(pt)
+                        self.map_controller.add_location_marker(loc)
+                        total += 1
+                        if total >= max_points:
+                            break
+            except Exception as e:
+                logger.warning(f"Plugin {getattr(plugin, 'name', plugin)} collect error: {e}")
+            if total >= max_points:
+                break
+        try:
+            if total > 0:
+                # Center map to show markers
+                self.map_controller.fit_bounds()
+                # Update status label
+                self.status_label.setText(f"Plotted {total} locations for '{term}'")
+        except Exception:
+            pass
+
     def export_search_results(self):
         """Export search results to a file with improved error handling and feedback"""
-        has_results = bool(self.search_results) if self.target_search_btn.isChecked() else bool(self.map_controller.markers)
+        marker_details = getattr(self.map_controller, 'marker_details', []) if self.map_controller else []
+        has_results = bool(self.search_results) if self.target_search_btn.isChecked() else bool(marker_details)
         
         if not has_results:
             QMessageBox.information(self, "Export Results", "No results to export")
@@ -873,7 +1015,7 @@ class CreepyAIGUI(QMainWindow):
             if filename.endswith('.json'):
                 with open(filename, 'w', encoding='utf-8') as f:
                     if self.map_search_btn.isChecked():
-                        json.dump(self.map_controller.markers, f, indent=2)
+                        json.dump(marker_details, f, indent=2)
                     else:
                         json.dump(self.search_results, f, indent=2)
             elif filename.endswith('.csv'):
@@ -882,9 +1024,9 @@ class CreepyAIGUI(QMainWindow):
                         # Export map markers
                         writer = csv.writer(f)
                         writer.writerow(['Latitude', 'Longitude', 'Title', 'Content', 'Timestamp', 'Source'])
-                        for marker in self.map_controller.markers:
+                        for marker in marker_details:
                             writer.writerow([
-                                marker['lat'], marker['lng'], 
+                                marker.get('lat', ''), marker.get('lng', ''), 
                                 marker.get('title', ''), 
                                 marker.get('content', ''), 
                                 marker.get('timestamp', ''), 
@@ -902,7 +1044,7 @@ class CreepyAIGUI(QMainWindow):
                             ])
             elif filename.endswith('.kml') and self.map_search_btn.isChecked():
                 # Export as KML only for map markers
-                self._export_as_kml(filename, self.map_controller.markers)
+                self._export_as_kml(filename, marker_details)
             else:
                 raise ValueError(f"Unsupported file format: {os.path.splitext(filename)[1]}")
             
@@ -919,7 +1061,7 @@ class CreepyAIGUI(QMainWindow):
     def _export_as_kml(self, filename: str, markers: list) -> None:
         """Export map markers as KML file"""
         try:
-            import simplekml
+            import simplekml  # type: ignore[import]
             kml = simplekml.Kml()
             
             # Add markers as placemarks
@@ -952,20 +1094,22 @@ class CreepyAIGUI(QMainWindow):
         to_datetime = datetime.datetime.combine(to_date, datetime.time.max)
         
         # Update map controller date range
-        self.map_controller.set_date_range(from_datetime, to_datetime)
+        if self.map_controller:
+            self.map_controller.set_date_range(from_datetime, to_datetime)
         
         # Update status
         self.status_label.setText(f"Filters applied: {from_date} to {to_date}")
     
     def refresh_map(self):
         """Refresh map data"""
-        self.map_controller.update_map_markers()
+        if self.map_controller:
+            self.map_controller.update_map_markers()
         self.status_label.setText("Map refreshed")
     
     def new_project(self):
         """Create a new project"""
         # Implementation would clear current data and start fresh
-        self.statusBar.showMessage("New project created", 3000)
+        self.status_bar.showMessage("New project created", 3000)
     
     def open_project(self):
         """Open an existing project"""
@@ -974,7 +1118,7 @@ class CreepyAIGUI(QMainWindow):
             self, "Open Project", "", "CreepyAI Projects (*.cai);;All Files (*)"
         )
         if filename:
-            self.statusBar.showMessage(f"Opened project: {filename}", 3000)
+            self.status_bar.showMessage(f"Opened project: {filename}", 3000)
     
     def save_project(self):
         """Save the current project"""
@@ -983,7 +1127,7 @@ class CreepyAIGUI(QMainWindow):
             self, "Save Project", "", "CreepyAI Projects (*.cai);;All Files (*)"
         )
         if filename:
-            self.statusBar.showMessage(f"Project saved: {filename}", 3000)
+            self.status_bar.showMessage(f"Project saved: {filename}", 3000)
     
     def export_data(self):
         """Export data to file"""
@@ -992,7 +1136,7 @@ class CreepyAIGUI(QMainWindow):
             self, "Export Data", "", "JSON Files (*.json);;CSV Files (*.csv);;All Files (*)"
         )
         if filename:
-            self.statusBar.showMessage(f"Data exported to: {filename}", 3000)
+            self.status_bar.showMessage(f"Data exported to: {filename}", 3000)
     
     def change_map_layer(self, layer_name):
         """Change the map base layer"""
@@ -1034,6 +1178,7 @@ class CreepyAIGUI(QMainWindow):
                 border-radius: 3px;
                 padding: 5px 10px;
                 background-color: #f5f5f5;
+                color: #222222; /* Darker text when not checked */
             }
             QPushButton:hover {
                 background-color: #e5e5e5;
@@ -1056,6 +1201,7 @@ class CreepyAIGUI(QMainWindow):
                 border-radius: 3px;
                 padding: 5px 10px;
                 background-color: #f5f5f5;
+                color: #222222; /* Darker text for readability */
             }
             QPushButton:hover {
                 background-color: #e5e5e5;
@@ -1065,8 +1211,8 @@ class CreepyAIGUI(QMainWindow):
                 background-color: #d0d0d0;
             }
             QPushButton:disabled {
-                background-color: #f5f5f5;
-                color: #aaa;
-                border-color: #ddd;
+                background-color: #e9e9e9; /* Slightly darker to increase contrast */
+                color: #666666; /* Darker disabled text */
+                border-color: #cfcfcf;
             }
         """

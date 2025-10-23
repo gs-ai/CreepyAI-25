@@ -56,6 +56,24 @@ def initialize_qt():
                         os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = platform_path
                 
                 logger.info("Set conda library paths for macOS")
+
+            # Fallback: if using PyQt5 wheels (pip) the plugins live under site-packages/PyQt5/Qt5/plugins
+            try:
+                import PyQt5  # type: ignore
+                pyqt_dir = os.path.dirname(PyQt5.__file__)
+                pyqt_plugins = os.path.join(pyqt_dir, 'Qt5', 'plugins')
+                pyqt_platforms = os.path.join(pyqt_plugins, 'platforms')
+
+                if not os.environ.get('QT_PLUGIN_PATH') and os.path.isdir(pyqt_plugins):
+                    os.environ['QT_PLUGIN_PATH'] = pyqt_plugins
+                    logger.info(f"Set QT_PLUGIN_PATH to PyQt plugins: {pyqt_plugins}")
+
+                if not os.environ.get('QT_QPA_PLATFORM_PLUGIN_PATH') and os.path.isdir(pyqt_platforms):
+                    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = pyqt_platforms
+                    logger.info(f"Set QT_QPA_PLATFORM_PLUGIN_PATH to PyQt platforms: {pyqt_platforms}")
+            except Exception as _e:
+                # Best-effort; continue if PyQt5 isn't importable yet
+                pass
         
         # Import WebEngine if needed
         try:
