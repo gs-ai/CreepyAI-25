@@ -90,6 +90,88 @@ class YelpPlugin(BasePlugin):
         
         return locations
 
+    def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:
+        """Return candidate Yelp businesses matching the search term.
+
+        This scans the Yelp Academic Dataset business file (NDJSON) under the
+        configured data directory and returns up to a reasonable number of
+        candidates. Each candidate contains:
+          - targetId: the Yelp business_id when available, otherwise a name slug
+          - targetName: business name
+          - pluginName: "Yelp"
+        """
+        results: List[Dict[str, Any]] = []
+        try:
+            data_dir = self.config.get("data_directory", "")
+            if not search_term or not data_dir or not os.path.exists(data_dir):
+                return results
+
+            # Locate the academic business NDJSON file
+            acad_business = None
+            for pattern in [
+                "**/yelp_academic_dataset_business.json",
+                "**/business.json",
+            ]:
+                matches = glob.glob(os.path.join(data_dir, pattern), recursive=True)
+                if matches:
+                    acad_business = matches[0]
+                    break
+
+            if not acad_business or not os.path.exists(acad_business):
+                return results
+
+            term_lower = search_term.lower()
+            seen_ids = set()
+            seen_names = set()
+            max_results = 200  # cap to keep UI responsive
+
+            with open(acad_business, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    if len(results) >= max_results:
+                        break
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        # If the file is not strict NDJSON and contains arrays/objects
+                        try:
+                            obj = json.loads(line) if line.startswith('{') else None
+                        except Exception:
+                            obj = None
+                    if not isinstance(obj, dict):
+                        continue
+
+                    name = obj.get('name') or obj.get('business_name')
+                    if not name or term_lower not in name.lower():
+                        continue
+
+                    business_id = obj.get('business_id') or obj.get('id')
+                    target_id = None
+                    if business_id:
+                        if business_id in seen_ids:
+                            continue
+                        seen_ids.add(business_id)
+                        target_id = str(business_id)
+                    else:
+                        # Fallback to name-based de-duplication
+                        key = name.strip().lower()
+                        if key in seen_names:
+                            continue
+                        seen_names.add(key)
+                        target_id = key
+
+                    results.append({
+                        'targetId': target_id,
+                        'targetName': name,
+                        'pluginName': self.name,
+                    })
+        except Exception:
+            # Best-effort; don't propagate UI errors from dataset scanning
+            pass
+        return results
+
     def _process_academic_business(self, business_path: str, target: str,
                                    date_from: Optional[datetime],
                                    date_to: Optional[datetime]) -> List[LocationPoint]:
