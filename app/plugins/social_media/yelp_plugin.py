@@ -57,6 +57,24 @@ class YelpPlugin(BasePlugin):
                 os.makedirs(temp_dir, exist_ok=True)
                 zip_ref.extractall(temp_dir)
                 data_dir = temp_dir
+
+        # Special handling: Yelp Academic Dataset (NDJSON files per entity)
+        # Common filenames: yelp_academic_dataset_business.json, _review.json, _tip.json, _user.json, _checkin.json
+        try:
+            acad_business = None
+            # Look for academic dataset business file
+            for pattern in [
+                "**/yelp_academic_dataset_business.json",
+                "**/business.json",
+            ]:
+                matches = glob.glob(os.path.join(data_dir, pattern), recursive=True)
+                if matches:
+                    acad_business = matches[0]
+                    break
+            if acad_business:
+                locations.extend(self._process_academic_business(acad_business, target, date_from, date_to))
+        except Exception as e:
+            print(f"Error processing Yelp academic dataset: {e}")
                 
         # Process JSON files (Yelp user data exports)
         json_locations = self._process_json_files(data_dir, target, attempt_geocoding, date_from, date_to)
@@ -71,6 +89,87 @@ class YelpPlugin(BasePlugin):
         locations.extend(html_locations)
         
         return locations
+
+    def _process_academic_business(self, business_path: str, target: str,
+                                   date_from: Optional[datetime],
+                                   date_to: Optional[datetime]) -> List[LocationPoint]:
+        """Parse Yelp Academic Dataset business file (NDJSON) and return locations.
+
+        Notes:
+        - Each line is a JSON object representing a business.
+        - Coordinates are top-level fields: latitude, longitude.
+        - Address components include: address, city, state, postal_code.
+        - We filter by target (case-insensitive substring) against business name if provided.
+        - Reviews/timestamps are in separate files; we set timestamp to now if none.
+        """
+        results: List[LocationPoint] = []
+        try:
+            with open(business_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        # Some distributions use a JSON array; fallback
+                        try:
+                            data = json.loads(line)
+                            if isinstance(data, dict):
+                                obj = data
+                            else:
+                                continue
+                        except Exception:
+                            continue
+
+                    # Required fields
+                    name = obj.get('name') or obj.get('business_name')
+                    lat = obj.get('latitude')
+                    lon = obj.get('longitude')
+                    if lat is None or lon is None:
+                        continue
+
+                    if target and target.strip():
+                        if not name or target.lower() not in name.lower():
+                            continue
+
+                    # Compose address context
+                    parts = []
+                    for key in ['address', 'address1', 'address2', 'address3']:
+                        val = obj.get(key)
+                        if val:
+                            parts.append(val)
+                    city = obj.get('city')
+                    state = obj.get('state')
+                    postal = obj.get('postal_code')
+                    if city: parts.append(city)
+                    if state: parts.append(state)
+                    if postal: parts.append(str(postal))
+                    address = ", ".join([p for p in parts if p]) if parts else None
+
+                    context = name or "Yelp Business"
+                    if address:
+                        context += f" at {address}"
+
+                    # Timestamp: dataset doesn't include per-business timestamps; use now
+                    ts = datetime.now()
+
+                    try:
+                        results.append(
+                            LocationPoint(
+                                latitude=float(lat),
+                                longitude=float(lon),
+                                timestamp=ts,
+                                source="Yelp Academic",
+                                context=context,
+                            )
+                        )
+                    except Exception:
+                        continue
+        except Exception as e:
+            print(f"Error reading academic business file: {e}")
+
+        return results
     
     def _process_json_files(self, data_dir: str, target: str, attempt_geocoding: bool, 
                            date_from: Optional[datetime], date_to: Optional[datetime]) -> List[LocationPoint]:

@@ -160,6 +160,15 @@ def main():
             
             app = QApplication(sys.argv)
             app.setApplicationName("CreepyAI")
+            # Apply global dark theme stylesheet
+            try:
+                from app.core.path_utils import get_app_root
+                qss_path = get_app_root() / 'resources' / 'styles' / 'dark.qss'
+                if qss_path.exists():
+                    with open(qss_path, 'r', encoding='utf-8') as f:
+                        app.setStyleSheet(f.read())
+            except Exception as _e:
+                logger.warning(f"Could not apply dark theme stylesheet: {_e}")
             
             # Dynamically load appropriate GUI class
             if is_webengine_available():

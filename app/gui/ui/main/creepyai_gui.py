@@ -120,15 +120,15 @@ class CreepyAIGUI(QMainWindow):
         # Set toolbar style
         toolbar.setStyleSheet("""
             QToolBar {
-                border-bottom: 1px solid #cccccc;
+                border-bottom: 1px solid #444444;
                 background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                                 stop: 0 #f8f8f8, stop: 1 #eeeeee);
+                                                 stop: 0 #3a3a3a, stop: 1 #2d2d2d);
                 spacing: 2px;
                 padding: 2px;
             }
             QToolBar::separator {
                 width: 1px;
-                background-color: #cccccc;
+                background-color: #555555;
                 margin: 4px 8px;
             }
         """)
@@ -179,23 +179,38 @@ class CreepyAIGUI(QMainWindow):
         self.map_layer_combo = QComboBox()
         self.map_layer_combo.setToolTip("Select map type - also available via the map control panel")
         self.map_layer_combo.setStyleSheet("""
-            QComboBox {
-                min-width: 150px;
-                padding: 3px 10px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: #f8f8f8;
-            }
-            QComboBox::drop-down {
-                width: 20px;
-            }
-        """)
+                QComboBox {
+                    min-width: 150px;
+                    padding: 3px 10px;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    background-color: #3c3c3c;
+                    color: #e1e1e1;
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #2b2b2b;
+                    color: #e1e1e1;
+                    selection-background-color: #007ACC;
+                    selection-color: #ffffff;
+                }
+                QComboBox::drop-down {
+                    width: 20px;
+                }
+            """)
         
         # Try to populate from controller if available; otherwise, use defaults
         try:
             if hasattr(self, 'map_controller') and self.map_controller is not None:
                 self.map_layer_combo.addItems(self.map_controller.get_available_layers())
-                self.map_layer_combo.setCurrentText(self.map_controller.get_current_layer())
+                # Prefer Dark Mode by default when available
+                preferred = "Dark Mode"
+                current = self.map_controller.get_current_layer() if hasattr(self.map_controller, 'get_current_layer') else None
+                if preferred in [self.map_layer_combo.itemText(i) for i in range(self.map_layer_combo.count())]:
+                    self.map_layer_combo.setCurrentText(preferred)
+                    # Apply to map immediately
+                    self.change_map_layer(preferred)
+                elif current:
+                    self.map_layer_combo.setCurrentText(current)
             else:
                 raise RuntimeError("Map controller not yet initialized")
         except Exception as e:
@@ -268,24 +283,26 @@ class CreepyAIGUI(QMainWindow):
         self.config_button.setPopupMode(QToolButton.MenuButtonPopup)
         self.config_button.setToolTip("Configure application settings")
         self.config_button.setStyleSheet("""
-            QToolButton {
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: #f5f5f5;
-                padding: 3px 10px;
-            }
-            QToolButton:hover {
-                background-color: #e0e0e0;
-                border-color: #999;
-            }
-            QToolButton:pressed {
-                background-color: #d0d0d0;
-            }
-            QToolButton::menu-button {
-                width: 16px;
-                border-left: 1px solid #ccc;
-            }
-        """)
+                QToolButton {
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    background-color: #3a3a3a;
+                    color: #e1e1e1;
+                    padding: 3px 10px;
+                }
+                QToolButton:hover {
+                    background-color: #4a4a4a;
+                    border-color: #777777;
+                }
+                QToolButton:pressed {
+                    background-color: #007ACC;
+                    color: #ffffff;
+                }
+                QToolButton::menu-button {
+                    width: 16px;
+                    border-left: 1px solid #555555;
+                }
+            """)
         
         # Create dropdown menu for configuration options
         config_menu = QMenu()
@@ -550,7 +567,7 @@ class CreepyAIGUI(QMainWindow):
         
         # Search input field with better styling
         search_frame = QFrame()
-        search_frame.setStyleSheet("QFrame { background-color: #f8f8f8; border-radius: 5px; padding: 5px; }")
+        search_frame.setStyleSheet("QFrame { background-color: #1e1e1e; border-radius: 5px; padding: 5px; border: 1px solid #444444; }")
         search_layout = QHBoxLayout(search_frame)
         search_layout.setContentsMargins(5, 5, 5, 5)
         
@@ -558,13 +575,17 @@ class CreepyAIGUI(QMainWindow):
         self.search_input.setPlaceholderText("Search locations or targets...")
         self.search_input.setStyleSheet("""
             QLineEdit {
-                border: 1px solid #ccc;
+                border: 1px solid #555555;
                 border-radius: 3px;
                 padding: 5px;
-                background: white;
+                background: #2b2b2b;
+                color: #e1e1e1;
             }
             QLineEdit:focus {
                 border-color: #4a86e8;
+            }
+            QLineEdit::placeholder {
+                color: #b0b0b0;
             }
         """)
         # Add Enter key support
@@ -634,10 +655,12 @@ class CreepyAIGUI(QMainWindow):
         self.results_label = QLabel("Enter a search term above to find locations or targets")
         self.results_label.setStyleSheet("""
             QLabel {
-                background-color: #f0f0f0;
+                background-color: #1e1e1e;
+                color: #e1e1e1;
                 border-radius: 3px;
                 padding: 8px;
                 margin-top: 10px;
+                border: 1px solid #444444;
             }
         """)
         self.results_label.setWordWrap(True)
@@ -681,7 +704,7 @@ class CreepyAIGUI(QMainWindow):
         
         # Date range filter with improved styling
         date_frame = QFrame()
-        date_frame.setStyleSheet("QFrame { background-color: #f8f8f8; border-radius: 5px; padding: 10px; }")
+        date_frame.setStyleSheet("QFrame { background-color: #1e1e1e; border-radius: 5px; padding: 10px; border: 1px solid #444444; }")
         date_layout = QVBoxLayout(date_frame)
         
         # Add a title with better styling
@@ -703,10 +726,11 @@ class CreepyAIGUI(QMainWindow):
         self.from_date.setDate(QDate.currentDate().addYears(-1))
         self.from_date.setStyleSheet("""
             QDateEdit {
-                border: 1px solid #ccc;
+                border: 1px solid #555555;
                 border-radius: 3px;
                 padding: 4px;
-                background: white;
+                background: #2b2b2b;
+                color: #e1e1e1;
             }
             QDateEdit::drop-down {
                 subcontrol-origin: padding;
@@ -731,10 +755,11 @@ class CreepyAIGUI(QMainWindow):
         self.to_date.setDate(QDate.currentDate())
         self.to_date.setStyleSheet("""
             QDateEdit {
-                border: 1px solid #ccc;
+                border: 1px solid #555555;
                 border-radius: 3px;
                 padding: 4px;
-                background: white;
+                background: #2b2b2b;
+                color: #e1e1e1;
             }
             QDateEdit::drop-down {
                 subcontrol-origin: padding;
@@ -1061,6 +1086,7 @@ class CreepyAIGUI(QMainWindow):
                 border-radius: 3px;
                 padding: 5px 10px;
                 background-color: #f5f5f5;
+                color: #222222; /* Darker text when not checked */
             }
             QPushButton:hover {
                 background-color: #e5e5e5;
@@ -1083,6 +1109,7 @@ class CreepyAIGUI(QMainWindow):
                 border-radius: 3px;
                 padding: 5px 10px;
                 background-color: #f5f5f5;
+                color: #222222; /* Darker text for readability */
             }
             QPushButton:hover {
                 background-color: #e5e5e5;
@@ -1092,8 +1119,8 @@ class CreepyAIGUI(QMainWindow):
                 background-color: #d0d0d0;
             }
             QPushButton:disabled {
-                background-color: #f5f5f5;
-                color: #aaa;
-                border-color: #ddd;
+                background-color: #e9e9e9; /* Slightly darker to increase contrast */
+                color: #666666; /* Darker disabled text */
+                border-color: #cfcfcf;
             }
         """

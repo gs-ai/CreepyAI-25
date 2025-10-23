@@ -17,6 +17,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
 
 from app.models.location_data import LocationDataModel, Location
+from app.plugins.geocoding_helper import GeocodingHelper
 from app.core.path_utils import get_resource_path
 
 logger = logging.getLogger(__name__)
@@ -63,19 +64,21 @@ class MapController(QObject):
         # Flag to track if map is ready
         self.map_ready = False
         
-        # Default view settings
-        self.default_lat = 0
-        self.default_lng = 0
+        # Default view settings (USA center)
+        self.default_lat = 39.8283
+        self.default_lng = -98.5795
         self.default_zoom = 4
 
         # Layer and visibility state
-        self._available_layers: List[str] = [
+        self._available_layers = [
             "Street Map", "Satellite", "Terrain", "Dark Mode"
         ]
-        self._current_layer: str = "Street Map"
-        self._visible_plugins: Dict[str, bool] = {}
-        self._date_from: Optional[datetime] = None
-        self._date_to: Optional[datetime] = None
+        self._current_layer = "Dark Mode"
+        self._visible_plugins = {}
+        self._date_from = None
+        self._date_to = None
+        # Geocoding helper for text -> coordinates search
+        self._geocoder = GeocodingHelper()
 
     # ---- Methods expected by UI (minimal implementations) ----
     def update_visible_plugins(self, plugin_name: str, visible: bool) -> None:
@@ -583,10 +586,30 @@ class MapController(QObject):
         self.update_map_markers()
 
     def search_map(self, term: str) -> int:
-        """Placeholder search on map. Returns number of matches."""
-        logger.info(f"search_map called with term: {term}")
-        # Without a concrete data model here, return 0.
-        return 0
+        """Geocode a text query and add a marker to the map; center view if found."""
+        try:
+            if not term or not isinstance(term, str):
+                return 0
+            lat, lon = self._geocoder.geocode(term)
+            if lat is None or lon is None:
+                logger.info(f"No geocoding result for term: {term}")
+                return 0
+            # Create a temporary Location and add marker
+            location = Location(latitude=lat, longitude=lon, source="Search", context=term)
+            # Ensure map is ready before adding
+            if self.map_ready:
+                self.add_location_marker(location)
+                # Center the map on the result with a reasonable zoom
+                self.set_view(lat, lon, zoom=12)
+                self._emit_markers_updated()
+                return 1
+            else:
+                # Queue behavior could be added; for now, just set view when ready.
+                logger.warning("Map not ready yet when search_map was called")
+                return 0
+        except Exception as e:
+            logger.warning(f"search_map error: {e}")
+            return 0
 
     def search_for_targets(self, term: str) -> List[Dict[str, Any]]:
         """Placeholder target search. Returns an empty list."""
