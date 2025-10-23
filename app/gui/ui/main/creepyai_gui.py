@@ -866,10 +866,8 @@ class CreepyAIGUI(QMainWindow):
                     self.results_label.setText(f"ℹ️ No locations found matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d1ecf1; color: #0c5460; border-radius: 3px; padding: 8px; }")
             else:
-                # Search for targets
-                if not self.map_controller:
-                    raise RuntimeError("Map is not ready yet")
-                self.search_results = self.map_controller.search_for_targets(search_term)
+                # Search for targets via enabled plugins
+                self.search_results = self._search_targets_via_plugins(search_term)
                 if self.search_results:
                     self.results_label.setText(f"✅ Found {len(self.search_results)} potential targets matching '{search_term}'")
                     self.results_label.setStyleSheet("QLabel { background-color: #d4edda; color: #155724; border-radius: 3px; padding: 8px; }")
@@ -899,6 +897,48 @@ class CreepyAIGUI(QMainWindow):
         
         # Reset to original style after brief delay
         QTimer.singleShot(1500, lambda: self.status_label.setStyleSheet(original_style))
+
+    def _get_enabled_plugins(self):
+        """Return a list of enabled plugin instances from the plugin selector."""
+        enabled = []
+        try:
+            if not hasattr(self, 'plugin_selector') or not self.plugin_selector:
+                return enabled
+            for name, checkbox in getattr(self.plugin_selector, 'plugin_checkboxes', {}).items():
+                if checkbox.isChecked():
+                    # Find the plugin instance with this name
+                    for plugin in getattr(self.plugin_selector, 'plugins', []):
+                        if getattr(plugin, 'name', None) == name:
+                            enabled.append(plugin)
+                            break
+        except Exception as e:
+            logger.warning(f"Error discovering enabled plugins: {e}")
+        return enabled
+
+    def _search_targets_via_plugins(self, term: str) -> List[Dict[str, Any]]:
+        """Aggregate target candidates across enabled plugins."""
+        results: List[Dict[str, Any]] = []
+        seen = set()
+        for plugin in self._get_enabled_plugins():
+            try:
+                if hasattr(plugin, 'search_for_targets'):
+                    candidates = plugin.search_for_targets(term) or []
+                    for c in candidates:
+                        # Normalise and de-duplicate by (pluginName,targetId)
+                        pid = str(c.get('targetId', ''))
+                        pname = c.get('pluginName') or getattr(plugin, 'name', plugin.__class__.__name__)
+                        key = (pname, pid)
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        results.append({
+                            'targetId': pid,
+                            'targetName': c.get('targetName', pid),
+                            'pluginName': pname,
+                        })
+            except Exception as e:
+                logger.warning(f"Plugin {getattr(plugin, 'name', plugin)} search error: {e}")
+        return results
 
     def export_search_results(self):
         """Export search results to a file with improved error handling and feedback"""
