@@ -21,28 +21,18 @@ class FoursquarePlugin(BasePlugin):
         )
 
     def get_configuration_options(self) -> List[dict]:
-        return [
-            {
-                "name": "export_directory",
-                "display_name": "Export directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": (
-                    "Directory containing check-in JSON files downloaded from "
-                    "Foursquare or Swarm."
-                ),
-            }
-        ]
+        return []
 
     def is_configured(self) -> tuple[bool, str]:
         directory = self.config.get("export_directory")
-        if not directory:
-            return False, "No export directory configured"
-        resolved = Path(directory).expanduser()
-        if not resolved.exists():
-            return False, f"Export directory does not exist: {directory}"
-        return True, "FoursquarePlugin is configured"
+        if directory and Path(directory).expanduser().exists():
+            return True, "FoursquarePlugin is configured"
+
+        if self.has_input_data():
+            return True, "FoursquarePlugin is configured"
+
+        managed_dir = self.get_data_directory()
+        return False, f"Add Foursquare exports to {managed_dir}"
 
     def collect_locations(
         self,
@@ -50,12 +40,15 @@ class FoursquarePlugin(BasePlugin):
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
     ) -> List[LocationPoint]:
-        configured, message = self.is_configured()
-        if not configured:
-            logger.warning("FoursquarePlugin not configured: %s", message)
-            return []
+        directory_setting = self.config.get("export_directory")
+        if directory_setting and Path(directory_setting).expanduser().exists():
+            directory = Path(directory_setting).expanduser()
+        else:
+            if not self.has_input_data():
+                logger.warning("FoursquarePlugin has no data to process")
+                return []
+            directory = Path(self.get_data_directory()).expanduser()
 
-        directory = Path(self.config["export_directory"]).expanduser()
         points: List[LocationPoint] = []
         for path in self._iter_files(directory):
             try:

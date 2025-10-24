@@ -5,7 +5,6 @@ import re
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
-import zipfile
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
 
@@ -21,26 +20,14 @@ class PinterestPlugin(BasePlugin):
     
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir:
-            return False, "Pinterest data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"Pinterest data directory does not exist: {data_dir}"
-            
-        return True, "Pinterest plugin is configured"
-    
+        if self.has_input_data():
+            return True, "Pinterest plugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add Pinterest exports to {data_dir}"
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
-            {
-                "name": "data_directory",
-                "display_name": "Pinterest Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Pinterest data export"
-            },
             {
                 "name": "attempt_geocoding",
                 "display_name": "Attempt Geocoding",
@@ -55,25 +42,16 @@ class PinterestPlugin(BasePlugin):
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from Pinterest data export"""
         locations = []
-        data_dir = self.config.get("data_directory", "")
+        if not self.has_input_data():
+            logger.warning("Pinterest data directory has no content")
+            return locations
+
+        data_dir = self.prepare_data_directory("temp_pinterest_extract")
         attempt_geocoding = self.config.get("attempt_geocoding", True)
-        
+
         if not data_dir or not os.path.exists(data_dir):
             logger.warning("Pinterest data directory not found")
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            try:
-                with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                    temp_dir = os.path.join(self.data_dir, "temp_pinterest_extract")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_ref.extractall(temp_dir)
-                    data_dir = temp_dir
-                    logger.info(f"Extracted Pinterest ZIP archive to {temp_dir}")
-            except Exception as e:
-                logger.error(f"Failed to extract Pinterest ZIP archive: {e}")
-                return locations
         
         # Look for Pinterest data files that may contain location information
         # 1. Pins data

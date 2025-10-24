@@ -5,7 +5,6 @@ import csv
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-import zipfile
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
 
@@ -24,14 +23,6 @@ class YelpPlugin(BasePlugin):
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
             {
-                "name": "data_directory",
-                "display_name": "Yelp Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Yelp data export or saved reviews/bookmarks"
-            },
-            {
                 "name": "attempt_geocoding",
                 "display_name": "Attempt Geocoding",
                 "type": "boolean",
@@ -44,19 +35,14 @@ class YelpPlugin(BasePlugin):
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                           date_to: Optional[datetime] = None) -> List[LocationPoint]:
         locations = []
-        data_dir = self.config.get("data_directory", "")
+        data_dir = self.prepare_data_directory("temp_yelp_extract")
         attempt_geocoding = self.config.get("attempt_geocoding", True)
-        
+
         if not data_dir or not os.path.exists(data_dir):
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                temp_dir = os.path.join(self.data_dir, "temp_yelp_extract")
-                os.makedirs(temp_dir, exist_ok=True)
-                zip_ref.extractall(temp_dir)
-                data_dir = temp_dir
+
+        if not self.has_input_data():
+            return locations
                 
         # Process JSON files (Yelp user data exports)
         json_locations = self._process_json_files(data_dir, target, attempt_geocoding, date_from, date_to)

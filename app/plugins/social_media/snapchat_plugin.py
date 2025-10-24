@@ -2,7 +2,6 @@ import os
 import json
 import glob
 import logging
-import zipfile
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
@@ -21,34 +20,18 @@ class SnapchatPlugin(BasePlugin):
     
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir:
-            return False, "Snapchat data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"Snapchat data directory does not exist: {data_dir}"
-            
-        return True, "SnapchatPlugin is configured"
-    
+        if self.has_input_data():
+            return True, "SnapchatPlugin is configured"
+
+        memories_json = self.config.get("memories_json", "")
+        if memories_json and os.path.exists(memories_json):
+            return True, "SnapchatPlugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add Snapchat exports to {data_dir}"
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
-            {
-                "name": "data_directory",
-                "display_name": "Snapchat Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Snapchat data export"
-            },
-            {
-                "name": "memories_json",
-                "display_name": "Memories JSON File",
-                "type": "file",
-                "default": "",
-                "required": False,
-                "description": "Path to the memories.json file if not in the data directory"
-            },
             {
                 "name": "process_memories",
                 "display_name": "Process Memories",
@@ -81,29 +64,19 @@ class SnapchatPlugin(BasePlugin):
             List of LocationPoint objects
         """
         locations = []
-        data_dir = self.config.get("data_directory", "")
+        data_dir = self.prepare_data_directory("temp_snapchat_extract")
         memories_json = self.config.get("memories_json", "")
         process_memories = self.config.get("process_memories", True)
         process_stories = self.config.get("process_stories", True)
-        
-        # If neither the data directory nor memories file exists, return empty list
-        if (not data_dir or not os.path.exists(data_dir)) and (not memories_json or not os.path.exists(memories_json)):
+
+        if not self.has_input_data() and (not memories_json or not os.path.exists(memories_json)):
             logger.warning("No valid data directory or memories file found")
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            try:
-                with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                    temp_dir = os.path.join(self.data_dir, "temp_snapchat_extract")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_ref.extractall(temp_dir)
-                    data_dir = temp_dir
-                    logger.info(f"Extracted Snapchat ZIP archive to {temp_dir}")
-            except Exception as e:
-                logger.error(f"Failed to extract Snapchat ZIP archive: {e}")
-                return locations
-        
+
+        if data_dir and not os.path.exists(data_dir):
+            logger.warning("Snapchat data directory not found after preparation")
+            return locations
+
         # Process Snapchat Memories
         if process_memories:
             # Find memories.json file

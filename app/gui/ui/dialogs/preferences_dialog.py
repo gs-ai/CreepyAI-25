@@ -311,20 +311,6 @@ class PreferencesDialog(QDialog):
         
         layout.addWidget(plugin_general_group)
         
-        # Plugin data directory settings
-        plugin_data_group = QGroupBox("Plugin Data")
-        plugin_data_layout = QFormLayout(plugin_data_group)
-        
-        self.plugin_data_dir_edit = QLineEdit()
-        plugin_dir_layout = QHBoxLayout()
-        plugin_dir_layout.addWidget(self.plugin_data_dir_edit)
-        browse_btn = QPushButton("Browse...")
-        browse_btn.clicked.connect(lambda: self.browse_directory(self.plugin_data_dir_edit, "Plugin Data Directory"))
-        plugin_dir_layout.addWidget(browse_btn)
-        plugin_data_layout.addRow("Plugin Data Directory:", plugin_dir_layout)
-        
-        layout.addWidget(plugin_data_group)
-        
         # Plugin controls with enhanced buttons
         plugin_controls_group = QGroupBox("Plugin Controls")
         plugin_controls_layout = QHBoxLayout(plugin_controls_group)
@@ -490,9 +476,6 @@ class PreferencesDialog(QDialog):
         
         auto_load = self.config_manager.get("plugins", "auto_load", True)
         self.auto_load_plugins_checkbox.setChecked(auto_load)
-        
-        plugin_data_dir = self.config_manager.get("plugins", "data_directory", "")
-        self.plugin_data_dir_edit.setText(plugin_data_dir)
         
         # Privacy tab
         collect_stats = self.config_manager.get("privacy", "collect_usage_stats", False)
