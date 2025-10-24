@@ -1,4 +1,6 @@
 name: Auto Dependency Update
+permissions:
+  contents: write
 
 on:
   schedule:
