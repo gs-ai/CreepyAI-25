@@ -33,14 +33,6 @@ class LinkedInPlugin(BasePlugin):
         """Return configuration options for this plugin"""
         return [
             {
-                "name": "data_directory",
-                "display_name": "LinkedIn Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing LinkedIn data export"
-            },
-            {
                 "name": "include_connections",
                 "display_name": "Include Connections",
                 "type": "boolean",
@@ -68,15 +60,11 @@ class LinkedInPlugin(BasePlugin):
     
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir:
-            return False, "LinkedIn data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"LinkedIn data directory does not exist: {data_dir}"
-            
-        return True, "LinkedIn plugin is configured"
+        if self.has_input_data():
+            return True, "LinkedIn plugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add LinkedIn exports to {data_dir}"
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None,
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
@@ -95,12 +83,12 @@ class LinkedInPlugin(BasePlugin):
         
         # Check if target is a directory path or use configured directory
         data_dir = target
-        if not os.path.exists(data_dir) or not os.path.isdir(data_dir):
-            data_dir = self.config.get("data_directory", "")
-            if not os.path.exists(data_dir):
-                logger.warning(f"LinkedIn data directory not found: {data_dir}")
+        if not data_dir or not os.path.exists(data_dir) or not os.path.isdir(data_dir):
+            if not self.has_input_data():
+                logger.warning("LinkedIn data directory has no content")
                 return []
-        
+            data_dir = self.get_data_directory()
+
         # Process profile data
         profile_locations = self._process_profile(data_dir)
         locations.extend(profile_locations)

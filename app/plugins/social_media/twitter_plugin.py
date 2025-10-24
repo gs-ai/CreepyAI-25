@@ -3,7 +3,6 @@ import json
 import glob
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-import zipfile
 import logging
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 
@@ -17,36 +16,31 @@ class TwitterPlugin(BasePlugin):
         )
     
     def is_configured(self):
-        # Check if the plugin is properly configured
-        return True, "TwitterPlugin is configured"
-    
+        legacy_archive = self.config.get("archive_location", "")
+        if legacy_archive and os.path.exists(legacy_archive):
+            return True, "TwitterPlugin is configured"
+
+        if self.has_input_data():
+            return True, "TwitterPlugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add Twitter exports to {data_dir}"
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "name": "archive_location",
-                "display_name": "Twitter Archive Location",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Twitter data archive (ZIP or extracted)"
-            }
-        ]
+        return []
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         locations = []
         archive_location = self.config.get("archive_location", "")
-        
+
+        if not (archive_location and os.path.exists(archive_location)):
+            if not self.has_input_data():
+                return locations
+            archive_location = self.prepare_data_directory("temp_twitter_extract")
+
         if not archive_location or not os.path.exists(archive_location):
             return locations
-        
-        # Handle ZIP archives
-        if archive_location.endswith('.zip') and zipfile.is_zipfile(archive_location):
-            with zipfile.ZipFile(archive_location, 'r') as zip_ref:
-                temp_dir = os.path.join(self.data_dir, "temp_twitter_extract")
-                os.makedirs(temp_dir, exist_ok=True)
-                zip_ref.extractall(temp_dir)
-                archive_location = temp_dir
         
         # Look for tweet.js or tweets.json files
         tweet_files = []

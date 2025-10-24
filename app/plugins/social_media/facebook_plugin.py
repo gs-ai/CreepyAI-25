@@ -3,7 +3,6 @@ import json
 import glob
 from datetime import datetime
 import logging
-import zipfile
 import re
 from typing import List, Dict, Any, Optional, Tuple
 import traceback
@@ -24,45 +23,25 @@ class FacebookPlugin(BasePlugin):
     
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        if not data_dir:
-            return False, "Data directory not configured"
-        
-        if data_dir.endswith('.zip'):
-            if not os.path.isfile(data_dir):
-                return False, "ZIP file does not exist"
-        else:
-            if not os.path.isdir(data_dir):
-                return False, "Data directory does not exist"
-        
-        return True, "FacebookPlugin is configured"
-    
+        if self.has_input_data():
+            return True, "FacebookPlugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add Facebook exports to {data_dir}"
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "name": "data_directory",
-                "display_name": "Facebook Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Facebook data export"
-            }
-        ]
+        return []
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         locations = []
-        data_dir = self.config.get("data_directory", "")
-        
+        if not self.has_input_data():
+            return locations
+
+        data_dir = self.prepare_data_directory("temp_facebook_extract")
+
         if not data_dir or not os.path.exists(data_dir):
             return locations
-            
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                self.temp_dir = os.path.join(self.data_dir, "temp_facebook_extract")
-                os.makedirs(self.temp_dir, exist_ok=True)
-                zip_ref.extractall(self.temp_dir)
-                data_dir = self.temp_dir
         
         location_files = []
         
@@ -264,17 +243,14 @@ class FacebookPlugin(BasePlugin):
     
     def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:
         targets = []
-        data_dir = self.config.get("data_directory", "")
-        
+
+        if not self.has_input_data():
+            return targets
+
+        data_dir = self.prepare_data_directory("temp_facebook_extract")
+
         if not data_dir or not os.path.exists(data_dir):
             return targets
-        
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                self.temp_dir = os.path.join(self.data_dir, "temp_facebook_extract")
-                os.makedirs(self.temp_dir, exist_ok=True)
-                zip_ref.extractall(self.temp_dir)
-                data_dir = self.temp_dir
         
         location_files = []
         for pattern in [

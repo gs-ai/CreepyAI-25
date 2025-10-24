@@ -4,7 +4,6 @@ import glob
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
-import zipfile
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 
 logger = logging.getLogger(__name__)
@@ -18,50 +17,28 @@ class InstagramPlugin(BasePlugin):
     
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir:
-            return False, "Instagram data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"Instagram data directory does not exist: {data_dir}"
-            
+        if not self.has_input_data():
+            data_dir = self.get_data_directory()
+            return False, f"Add Instagram exports to {data_dir}"
+
         return True, "Instagram plugin is configured"
-    
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "name": "data_directory",
-                "display_name": "Instagram Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Instagram data export"
-            }
-        ]
+        return []
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from Instagram data export"""
         locations = []
-        data_dir = self.config.get("data_directory", "")
-        
+        if not self.has_input_data():
+            logger.warning("Instagram data directory has no content")
+            return locations
+
+        data_dir = self.prepare_data_directory("temp_instagram_extract")
+
         if not data_dir or not os.path.exists(data_dir):
             logger.warning("Instagram data directory not found")
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            try:
-                with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                    temp_dir = os.path.join(self.data_dir, "temp_instagram_extract")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_ref.extractall(temp_dir)
-                    data_dir = temp_dir
-                    logger.info(f"Extracted Instagram ZIP archive to {temp_dir}")
-            except Exception as e:
-                logger.error(f"Failed to extract Instagram ZIP archive: {e}")
-                return locations
         
         # Look for media files that contain location data
         media_files = []

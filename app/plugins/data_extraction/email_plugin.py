@@ -31,16 +31,6 @@ class EmailPlugin(BasePlugin):
     def get_configuration_options(self) -> List[dict]:
         return [
             {
-                "name": "data_directory",
-                "display_name": "Email directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": (
-                    "Directory containing .mbox, Maildir folders or loose .eml files."
-                ),
-            },
-            {
                 "name": "target_email",
                 "display_name": "Target email address",
                 "type": "string",
@@ -51,12 +41,11 @@ class EmailPlugin(BasePlugin):
         ]
 
     def is_configured(self) -> tuple[bool, str]:
-        directory = self.config.get("data_directory")
-        if not directory:
-            return False, "No email directory configured"
-        if not Path(directory).expanduser().exists():
-            return False, f"Email directory does not exist: {directory}"
-        return True, "EmailPlugin is configured"
+        if self.has_input_data():
+            return True, "EmailPlugin is configured"
+
+        directory = self.get_data_directory()
+        return False, f"Add email archives to {directory}"
 
     def collect_locations(
         self,
@@ -69,7 +58,7 @@ class EmailPlugin(BasePlugin):
             logger.warning("EmailPlugin not configured: %s", message)
             return []
 
-        directory = Path(self.config["data_directory"]).expanduser()
+        directory = Path(self.get_data_directory()).expanduser()
         target_email = (self.config.get("target_email") or target or "").lower()
 
         points: List[LocationPoint] = []
