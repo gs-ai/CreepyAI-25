@@ -23,13 +23,11 @@ class SnapchatPlugin(ArchiveSocialMediaPlugin):
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
         if self.has_input_data():
-            return True, "Snapchat plugin is configured"
+            return True, "SnapchatPlugin is configured"
 
         memories_json = self.config.get("memories_json", "")
-        if memories_json:
-            candidate = Path(memories_json).expanduser()
-            if candidate.exists():
-                return True, "Snapchat plugin is configured"
+        if memories_json and os.path.exists(memories_json):
+            return True, "SnapchatPlugin is configured"
 
         data_dir = self.get_data_directory()
         return False, f"Add Snapchat exports to {data_dir}"
@@ -67,20 +65,18 @@ class SnapchatPlugin(ArchiveSocialMediaPlugin):
         Returns:
             List of LocationPoint objects
         """
-        locations: List[LocationPoint] = []
-        archive_root = self.resolve_archive_root()
+        locations = []
+        data_dir = self.prepare_data_directory("temp_snapchat_extract")
         memories_json = self.config.get("memories_json", "")
         process_memories = self.config.get("process_memories", True)
         process_stories = self.config.get("process_stories", True)
 
-        configured_memories: Optional[Path] = None
-        if memories_json:
-            candidate = Path(memories_json).expanduser()
-            if candidate.exists():
-                configured_memories = candidate
+        if not self.has_input_data() and (not memories_json or not os.path.exists(memories_json)):
+            logger.warning("No valid data directory or memories file found")
+            return locations
 
-        if archive_root is None and configured_memories is None:
-            logger.warning("No valid Snapchat archive directory or memories file found")
+        if data_dir and not os.path.exists(data_dir):
+            logger.warning("Snapchat data directory not found after preparation")
             return locations
 
         # Process Snapchat Memories

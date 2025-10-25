@@ -1,5 +1,6 @@
 import glob
-import json
+from datetime import datetime
+from typing import List, Dict, Any, Optional
 import logging
 import os
 from datetime import datetime
@@ -34,21 +35,17 @@ class TwitterPlugin(ArchiveSocialMediaPlugin):
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations: List[LocationPoint] = []
-        configured_archive = self.config.get("archive_location", "")
+        locations = []
+        archive_location = self.config.get("archive_location", "")
 
-        archive_location: Optional[str] = None
-        if configured_archive:
-            candidate = os.path.expanduser(configured_archive)
-            if os.path.exists(candidate):
-                archive_location = candidate
-
-        if archive_location is None:
-            archive_root = self.resolve_archive_root()
-            if archive_root is None:
+        if not (archive_location and os.path.exists(archive_location)):
+            if not self.has_input_data():
                 return locations
-            archive_location = str(archive_root)
+            archive_location = self.prepare_data_directory("temp_twitter_extract")
 
+        if not archive_location or not os.path.exists(archive_location):
+            return locations
+        
         # Look for tweet.js or tweets.json files
         tweet_files = []
         for pattern in ["**/tweet.js", "**/tweets.json", "**/tweet_*.js"]:

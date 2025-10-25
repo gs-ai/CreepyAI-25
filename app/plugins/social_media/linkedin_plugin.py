@@ -61,6 +61,14 @@ class LinkedInPlugin(ArchiveSocialMediaPlugin):
             }
         ]
     
+    def is_configured(self) -> Tuple[bool, str]:
+        """Check if the plugin is properly configured"""
+        if self.has_input_data():
+            return True, "LinkedIn plugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add LinkedIn exports to {data_dir}"
+    
     def collect_locations(self, target: str, date_from: Optional[datetime] = None,
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """
@@ -74,20 +82,15 @@ class LinkedInPlugin(ArchiveSocialMediaPlugin):
         Returns:
             List of LocationPoint objects
         """
-        locations: List[LocationPoint] = []
-
-        data_root: Optional[Path] = None
-        if target:
-            candidate = Path(target).expanduser()
-            if candidate.exists():
-                data_root = candidate
-
-        if data_root is None:
-            data_root = self.resolve_archive_root()
-
-        if data_root is None:
-            logger.warning("LinkedIn data directory not found")
-            return locations
+        locations = []
+        
+        # Check if target is a directory path or use configured directory
+        data_dir = target
+        if not data_dir or not os.path.exists(data_dir) or not os.path.isdir(data_dir):
+            if not self.has_input_data():
+                logger.warning("LinkedIn data directory has no content")
+                return []
+            data_dir = self.get_data_directory()
 
         # Process profile data
         locations.extend(self._process_profile(data_root))

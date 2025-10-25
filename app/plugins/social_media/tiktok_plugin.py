@@ -4,9 +4,9 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-
-from app.plugins.base_plugin import LocationPoint
+from typing import List, Dict, Any, Optional, Tuple
+import logging
+from app.plugins.base_plugin import BasePlugin, LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
 from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
@@ -20,6 +20,14 @@ class TikTokPlugin(ArchiveSocialMediaPlugin):
             temp_subdir="temp_tiktok_extract",
         )
         self.geocoder = GeocodingHelper()
+    
+    def is_configured(self) -> Tuple[bool, str]:
+        """Check if the plugin is properly configured"""
+        if self.has_input_data():
+            return True, "TikTok plugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add TikTok exports to {data_dir}"
 
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
@@ -36,15 +44,17 @@ class TikTokPlugin(ArchiveSocialMediaPlugin):
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                           date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from TikTok data export"""
-        locations: List[LocationPoint] = []
-
-        archive_root = self.resolve_archive_root()
-        if archive_root is None:
-            logger.warning("TikTok data directory not found")
+        locations = []
+        if not self.has_input_data():
+            logger.warning("TikTok data directory has no content")
             return locations
 
-        data_dir = str(archive_root)
+        data_dir = self.prepare_data_directory("temp_tiktok_extract")
         attempt_geocoding = self.config.get("attempt_geocoding", True)
+
+        if not data_dir or not os.path.exists(data_dir):
+            logger.warning("TikTok data directory not found")
+            return locations
         
         # Look for different types of TikTok data files that might contain location data
         
