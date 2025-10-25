@@ -1,48 +1,50 @@
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-
-from app.plugins.base_plugin import LocationPoint
-from app.plugins.social_media.base import ArchiveSocialMediaPlugin
+from typing import List, Dict, Any, Optional, Tuple
+from app.plugins.base_plugin import BasePlugin, LocationPoint
 
 logger = logging.getLogger(__name__)
 
 class InstagramPlugin(ArchiveSocialMediaPlugin):
-    data_source_url = "https://www.instagram.com"
-    collection_terms = (
-        "Instagram office",
-        "Instagram headquarters",
-        "Meta office Los Angeles",
-    )
-
     def __init__(self) -> None:
         super().__init__(
             name="Instagram",
             description="Extract location data from Instagram data export without API",
             temp_subdir="temp_instagram_extract",
         )
+    
+    def is_configured(self) -> Tuple[bool, str]:
+        """Check if the plugin is properly configured"""
+        if not self.has_input_data():
+            data_dir = self.get_data_directory()
+            return False, f"Add Instagram exports to {data_dir}"
 
-    def collect_locations(self, target: str, date_from: Optional[datetime] = None,
+        return True, "Instagram plugin is configured"
+
+    def get_configuration_options(self) -> List[Dict[str, Any]]:
+        return []
+    
+    def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from Instagram data export"""
-        collected = self.load_collected_locations(
-            target=target, date_from=date_from, date_to=date_to
-        )
-        if collected is not None:
-            return collected
-
-        locations: List[LocationPoint] = []
-
-        archive_root = self.resolve_archive_root()
-        if archive_root is None:
-            logger.warning("Instagram data directory not found")
+        locations = []
+        if not self.has_input_data():
+            logger.warning("Instagram data directory has no content")
             return locations
 
-        media_patterns = ["**/media.json", "**/posts_1.json", "**/posts*.json"]
-        media_files = list(self.iter_data_files(archive_root, media_patterns))
+        data_dir = self.prepare_data_directory("temp_instagram_extract")
 
-        logger.info("Found %d Instagram media files", len(media_files))
+        if not data_dir or not os.path.exists(data_dir):
+            logger.warning("Instagram data directory not found")
+            return locations
+        
+        # Look for media files that contain location data
+        media_files = []
+        for pattern in ["**/media.json", "**/posts_1.json", "**/posts*.json"]:
+            media_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
+        
+        logger.info(f"Found {len(media_files)} Instagram media files")
         
         for media_file in media_files:
             try:
