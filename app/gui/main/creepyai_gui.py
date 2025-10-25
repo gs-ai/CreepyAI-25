@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QToolBar, QDialog, QVBoxLayout, QHBoxLayout
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QSettings, QTimer
-from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtGui import QIcon
 
 # Import internal modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -32,6 +32,7 @@ from app.analysis import (
     load_social_media_records,
     persist_analysis_result,
 )
+from app.core.config_manager import ConfigManager
 from app.gui.LLMAnalysisDialog import LLMAnalysisDialog
 from app.models.Database import Database
 from app.models.Location import Location
@@ -40,6 +41,7 @@ from utilities.PluginManager import PluginManager
 from utilities.WebScrapingUtility import WebScrapingUtility
 from utilities.GeocodingUtility import GeocodingUtility
 from utilities.ExportUtils import ExportManager
+from utilities.webengine_compat import setup_webengine_options
 
 # Import UI components
 from ui.PersonProjectWizard import PersonProjectWizard
@@ -54,40 +56,26 @@ logger = logging.getLogger(__name__)
 
 class CreepyMainWindow(QMainWindow):
     """Main window for the CreepyAI application."""
-    
-    def __init__(self, config_manager, parent=None):
-        # Fix: Call the parent class constructor first
-        super(CreepyMainWindow, self).__init__(parent)
-        
-        # Load icon styles
-        try:
-            style_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                    "resources", "styles", "icons.css")
-            if os.path.exists(style_path):
-                with open(style_path, 'r') as css_file:
-                    self.setStyleSheet(css_file.read())
-        except Exception as e:
-            print(f"Failed to load icon styles: {e}")
-    
-        # Load icon styles
-        try:
-            style_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                    "resources", "styles", "icons.css")
-            if os.path.exists(style_path):
-                with open(style_path, 'r') as css_file:
-                    self.setStyleSheet(css_file.read())
-        except Exception as e:
-            print(f"Failed to load icon styles: {e}")
-    
+
+    def __init__(self, config_manager=None, parent=None, load_plugins: bool = True):
+        super().__init__(parent)
+
+        if config_manager is None:
+            config_manager = ConfigManager()
+
+        self._apply_icon_styles()
+
         self.setWindowTitle("CreepyAI - Geolocation Intelligence")
         self.resize(1200, 800)
-        
+
         # Initialize components
         self.config_manager = config_manager
         self.database = Database()
         self.plugin_manager = PluginManager()
-        self.plugin_manager.load_plugins()
-        self.geocoder = GeocodingUtility(config_manager)
+        self._load_plugins = load_plugins
+        if load_plugins:
+            self.plugin_manager.load_plugins()
+        self.geocoder = GeocodingUtility(self.config_manager)
         self.export_manager = ExportManager()
         
         # Initialize recent projects list
@@ -103,7 +91,8 @@ class CreepyMainWindow(QMainWindow):
         self.locations = []
         
         # Configure plugins with database and config
-        self.plugin_manager.configure_plugins(config_manager, self.database)
+        if load_plugins:
+            self.plugin_manager.configure_plugins(self.config_manager, self.database)
         
         # Load settings
         self.load_settings()
@@ -123,7 +112,7 @@ class CreepyMainWindow(QMainWindow):
         self._analysis_refresh_timer.setSingleShot(False)
         self._analysis_refresh_timer.timeout.connect(self._background_refresh_tick)
         self._setup_background_tasks()
-    
+
     def _setup_ui(self):
         """Set up the user interface."""
         try:
@@ -146,6 +135,18 @@ class CreepyMainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to set up UI: {e}")
             QMessageBox.critical(self, "Error", f"Failed to set up UI: {e}")
+
+    def _apply_icon_styles(self) -> None:
+        """Apply the shared icon stylesheet if it exists."""
+        style_path = Path(__file__).resolve().parents[2] / "resources" / "styles" / "icons.css"
+        try:
+            stylesheet = style_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            logger.debug("Icon stylesheet not found at %s", style_path)
+        except Exception:
+            logger.exception("Failed to load icon stylesheet from %s", style_path)
+        else:
+            self.setStyleSheet(stylesheet)
     
     def _create_toolbars(self):
         """Create application toolbars."""
@@ -966,425 +967,51 @@ class CreepyMainWindow(QMainWindow):
             QMessageBox.warning(self, "Settings Error",
                                f"Could not open settings: {str(e)}")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = CreepyAIGUI(root)
-    root.mainloop()
 
-"""
-Main GUI entry point for CreepyAI
 
-This module initializes and launches the Qt GUI for CreepyAI.
-"""
-import sys
-import os
-import logging
-from pathlib import Path
+class CreepyAIGUI(CreepyMainWindow):
+    """Compatibility wrapper exposing the legacy CreepyAI GUI class name."""
 
-# Add project root to path if needed
-project_root = Path(__file__).parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-# Import Qt
-try:
-    from PyQt5.QtWidgets import QApplication, QMainWindow, QSplashScreen, QMessageBox
-    from PyQt5.QtCore import Qt, QTimer
-    from PyQt5.QtGui import QPixmap
-except ImportError:
-    logging.error("PyQt5 not found. Please install it with: pip install PyQt5")
-    sys.exit(1)
-
-# Import CreepyAI modules
-from app.gui.main.CreepyUI import Ui_MainWindow
-from utilities.webengine_compat import setup_webengine_options
-from app.core.logger import get_logger
-
-logger = get_logger('creepyai.gui.launcher')
-
-class CreepyAIMainWindow(QMainWindow):
-    """Main window for CreepyAI application"""
-    
-    def __init__(self, app_instance, parent=None):
-        super().__init__(parent)
-        self.app_instance = app_instance
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-        
-        # Set window title
-        self.setWindowTitle(f"CreepyAI v{app_instance.config.get('app.version', '2.5.0')}")
-        
-        # Connect signals and slots
-        self.setup_connections()
-        
-        # Initialize plugins
-        self.plugin_widgets = {}
-        self.load_plugins()
-    
-    def setup_connections(self):
-        """Set up signal/slot connections"""
-        # File menu
-        if hasattr(self.ui, 'actionNew'):
-            self.ui.actionNew.triggered.connect(self.new_project)
-        if hasattr(self.ui, 'actionOpen'):
-            self.ui.actionOpen.triggered.connect(self.open_project)
-        if hasattr(self.ui, 'actionSave'):
-            self.ui.actionSave.triggered.connect(self.save_project)
-        if hasattr(self.ui, 'actionExit'):
-            self.ui.actionExit.triggered.connect(self.close)
-        
-        # Plugins menu setup if exists
-        if hasattr(self.ui, 'menuPlugins'):
-            self.setup_plugins_menu()
-    
-    def setup_plugins_menu(self):
-        """Set up the plugins menu with available plugins"""
-        if not hasattr(self.ui, 'menuPlugins'):
-            return
-            
-        self.ui.menuPlugins.clear()
-        
-        # Add actions for each plugin
-        for plugin_name, plugin in self.app_instance.plugin_manager.active_plugins.items():
-            action = self.ui.menuPlugins.addAction(plugin_name)
-            action.triggered.connect(lambda checked, name=plugin_name: self.run_plugin(name))
-    
-    def load_plugins(self):
-        """Load and initialize plugin UI components"""
-        logger.info("Initializing plugin UI components")
-        for plugin_name, plugin_info in self.app_instance.plugin_manager.active_plugins.items():
-            plugin = plugin_info.get('instance')
-            if not plugin:
-                continue
-                
-            # If plugin has UI component, initialize it
-            if hasattr(plugin, 'create_widget'):
-                try:
-                    widget = plugin.create_widget()
-                    if widget:
-                        self.plugin_widgets[plugin_name] = widget
-                        logger.debug(f"Created UI widget for plugin {plugin_name}")
-                except Exception as e:
-                    logger.error(f"Error creating widget for plugin {plugin_name}: {e}")
-    
-    def run_plugin(self, plugin_name):
-        """Run a specific plugin"""
-        logger.info(f"Running plugin: {plugin_name}")
-        plugin = self.app_instance.plugin_manager.get_plugin(plugin_name)
-        if plugin:
-            try:
-                # Check if plugin has a GUI method
-                if hasattr(plugin, 'run_gui'):
-                    plugin.run_gui(self)
-                else:
-                    # Fall back to regular execute method
-                    result = plugin.execute()
-                    QMessageBox.information(self, f"Plugin {plugin_name}", 
-                                           f"Plugin executed with result: {result}")
-            except Exception as e:
-                logger.error(f"Error running plugin {plugin_name}: {e}")
-                QMessageBox.warning(self, "Plugin Error", 
-                                    f"Error running plugin {plugin_name}: {str(e)}")
-    
-    def new_project(self):
-        """Create a new project"""
-        from app.gui.dialogs.PersonProjectWizard import PersonProjectWizard
-        wizard = PersonProjectWizard(self)
-        if wizard.exec_():
-            # Get project data from wizard
-            project_data = wizard.get_project_data()
-            
-            # Create new project
-            project = self.app_instance.create_project(
-                project_data.get('name', 'New Project'),
-                project_data.get('target')
-            )
-            
-            # Update UI
-            self.update_project_ui(project)
-            
-            logger.info(f"Created new project: {project.name}")
-    
-    def open_project(self):
-        """Open an existing project"""
-        from PyQt5.QtWidgets import QFileDialog
-        
-        projects_dir = self.app_instance.config.get('app.projects_directory', 
-                                                  os.path.join(project_root, 'projects'))
-        
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Project", projects_dir, "Project Files (*.json)"
-        )
-        
-        if file_path:
-            try:
-                project = self.app_instance.load_project(file_path)
-                if project:
-                    self.update_project_ui(project)
-                    logger.info(f"Opened project: {project.name}")
-                else:
-                    QMessageBox.warning(self, "Error", "Failed to load project")
-            except Exception as e:
-                logger.error(f"Error opening project: {e}")
-                QMessageBox.warning(self, "Error", f"Failed to open project: {str(e)}")
-    
-    def save_project(self):
-        """Save the current project"""
-        project = self.app_instance.current_project
-        if not project:
-            QMessageBox.information(self, "No Project", "No project to save")
-            return
-            
-        if project.path:
-            project.save()
-            logger.info(f"Saved project: {project.name}")
-        else:
-            from PyQt5.QtWidgets import QFileDialog
-            
-            projects_dir = self.app_instance.config.get('app.projects_directory', 
-                                                      os.path.join(project_root, 'projects'))
-            
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save Project", os.path.join(projects_dir, f"{project.name}.json"),
-                "Project Files (*.json)"
-            )
-            
-            if file_path:
-                project.save(file_path)
-                logger.info(f"Saved project to: {file_path}")
-    
-    def update_project_ui(self, project):
-        """Update UI to reflect loaded project"""
-        self.app_instance.current_project = project
-        
-        # Update window title
-        self.setWindowTitle(f"CreepyAI - {project.name}")
-        
-        # Update any project-dependent UI elements
-        if hasattr(self.ui, 'projectNameLabel'):
-            self.ui.projectNameLabel.setText(project.name)
-            
-        # Update any maps or location displays
-        self.update_locations_display()
-    
-    def update_locations_display(self):
-        """Update the display of locations"""
-        project = self.app_instance.current_project
-        if not project:
-            return
-            
-        # Update locations table if it exists
-        if hasattr(self.ui, 'locationsTable'):
-            self.update_locations_table(project.locations)
-            
-        # Update map if it exists
-        if hasattr(self.ui, 'mapWidget'):
-            self.update_map(project.locations)
-    
-    def update_locations_table(self, locations):
-        """Update the locations table with project locations"""
-        # Implementation depends on actual table widget being used
-        pass
-    
-    def update_map(self, locations):
-        """Update the map with project locations"""
-        # Implementation depends on actual map widget being used
-        pass
-
-def show_splash_screen():
-    """Show a splash screen while loading"""
-    splash_path = os.path.join(project_root, 'assets', 'icons', 'ui', 'app_icon.png')
-    
-    if os.path.exists(splash_path):
-        splash_pixmap = QPixmap(splash_path)
-        splash = QSplashScreen(splash_pixmap, Qt.WindowStaysOnTopHint)
-        splash.show()
-        return splash
-    
-    return None
-
-def launch_gui(app_instance):
-    """
-    Launch the CreepyAI GUI
-    
-    Args:
-        app_instance: The CreepyAI application instance
-    """
-    try:
-        # Configure web engine for maps
-        setup_webengine_options()
-        
-        # Create Qt application if it doesn't exist
-        qt_app = QApplication.instance()
-        if not qt_app:
-            qt_app = QApplication(sys.argv)
-        
-        # Show splash screen
-        splash = show_splash_screen()
-        
-        # Create and show main window
-        main_window = CreepyAIMainWindow(app_instance)
-        main_window.show()
-        
-        # Close splash screen if it exists
-        if splash:
-            QTimer.singleShot(1000, splash.close)
-        
-        # Run the application
-        sys.exit(qt_app.exec_())
-        
-    except Exception as e:
-        logger.critical(f"Error launching GUI: {e}", exc_info=True)
-        raise
-
-"""
-Simple CreepyAI GUI for testing.
-"""
-import os
-import sys
-import logging
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QLabel, 
-                           QPushButton, QMenuBar, QMenu, QAction)
-from PyQt5.QtCore import Qt
-
-# Add parent directory to path to allow importing
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
-
-# Import UI modules
-try:
-    from app.gui.ui.about_dialog import AboutDialog
-    from app.gui.ui.plugin_config_dialog import PluginsConfigDialog
-    from app.gui.ui.settings_dialog import SettingsDialog
-except ImportError as e:
-    logging.warning(f"Could not import UI components: {e}")
-    # Define minimal versions if import fails
-    class AboutDialog:
-        def __init__(self, parent=None):
-            pass
-        def exec_(self):
-            return True
-            
-    class PluginsConfigDialog:
-        def __init__(self, plugin_manager=None, parent=None):
-            pass
-        def exec_(self):
-            return True
-            
-    class SettingsDialog:
-        def __init__(self, config=None, parent=None):
-            pass
-        def exec_(self):
-            return True
-
-logger = logging.getLogger('creepyai.gui')
-
-class CreepyAIGUI(QMainWindow):
-    """Main window for CreepyAI application."""
-    
-    def __init__(self, engine=None):
-        """Initialize the main window.
-        
-        Args:
-            engine: CreepyAI engine instance
-        """
-        super().__init__()
+    def __init__(
+        self,
+        engine=None,
+        config_manager=None,
+        parent=None,
+        load_plugins: bool = True,
+    ):
         self.engine = engine
-        self.setWindowTitle("CreepyAI")
-        self.resize(800, 600)
-        
-        # Create central widget and layout
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
-        
-        # Add welcome label
-        self.welcome_label = QLabel("Welcome to CreepyAI!")
-        self.welcome_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.welcome_label)
-        
-        # Add version info
-        version = engine.get_version() if engine else "2.5.0"
-        self.version_label = QLabel(f"Version: {version}")
-        self.version_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.version_label)
-        
-        # Add test button
-        self.test_button = QPushButton("Test Connection")
-        self.test_button.clicked.connect(self.test_connection)
-        self.layout.addWidget(self.test_button)
-        
-        # Add settings button
-        self.settings_button = QPushButton("Settings")
-        self.settings_button.clicked.connect(self.show_settings)
-        self.layout.addWidget(self.settings_button)
-        
-        # Add plugins button
-        self.plugins_button = QPushButton("Plugins")
-        self.plugins_button.clicked.connect(self.show_plugins)
-        self.layout.addWidget(self.plugins_button)
-        
-        # Create menus
-        self.create_menus()
-        
-        logger.info("CreepyAI GUI initialized")
-        
-    def create_menus(self):
-        """Create the application menus."""
-        # File menu
-        file_menu = self.menuBar().addMenu("&File")
-        
-        exit_action = QAction("E&xit", self)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-        
-        # Tools menu
-        tools_menu = self.menuBar().addMenu("&Tools")
-        
-        plugins_action = QAction("&Plugins", self)
-        plugins_action.triggered.connect(self.show_plugins)
-        tools_menu.addAction(plugins_action)
-        
-        settings_action = QAction("&Settings", self)
-        settings_action.triggered.connect(self.show_settings)
-        tools_menu.addAction(settings_action)
-        
-        # Help menu
-        help_menu = self.menuBar().addMenu("&Help")
-        
-        about_action = QAction("&About", self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
-        
-    def test_connection(self):
-        """Test the connection to the engine."""
-        if self.engine:
-            status = self.engine.get_status()
-            self.welcome_label.setText(f"Engine status: {status['initialized']}")
-            logger.info(f"Engine status: {status}")
-        else:
-            self.welcome_label.setText("No engine connected")
-            logger.warning("No engine connected")
-            
-    def show_plugins(self):
-        """Show the plugins dialog."""
-        if self.engine:
-            plugin_count = len(self.engine.plugins)
-            dialog = PluginsConfigDialog(self.engine.plugins, self)
-            dialog.exec_()
-            self.welcome_label.setText(f"Loaded plugins: {plugin_count}")
-            logger.info(f"Loaded plugins: {plugin_count}")
-        else:
-            self.welcome_label.setText("No engine connected")
-            logger.warning("No engine connected")
-            
-    def show_settings(self):
-        """Show the settings dialog."""
-        dialog = SettingsDialog(self.engine.config if self.engine else None, self)
-        dialog.exec_()
-            
-    def show_about(self):
-        """Show the about dialog."""
-        dialog = AboutDialog(self)
-        dialog.exec_()
-        self.welcome_label.setText("CreepyAI - OSINT Platform")
-        logger.info("About dialog shown")
+        if config_manager is None and engine is not None:
+            config_manager = getattr(engine, "config_manager", None)
+            if config_manager is None:
+                config_manager = getattr(engine, "settings_manager", None)
+        super().__init__(config_manager=config_manager, parent=parent, load_plugins=load_plugins)
+
+
+def launch_gui(
+    config_path: Optional[str] = None,
+    app_root: Optional[str] = None,
+    load_plugins: bool = True,
+) -> int:
+    """Launch the CreepyAI Qt application."""
+
+    if app_root and app_root not in sys.path:
+        sys.path.insert(0, app_root)
+
+    try:
+        setup_webengine_options()
+    except Exception:
+        logger.exception("Failed to configure Qt WebEngine options")
+
+    config_manager = ConfigManager(config_path)
+
+    qt_app = QApplication.instance()
+    if qt_app is None:
+        qt_app = QApplication(sys.argv)
+
+    window = CreepyMainWindow(config_manager=config_manager, load_plugins=load_plugins)
+    window.show()
+
+    return qt_app.exec_()
+
+
+__all__ = ["CreepyMainWindow", "CreepyAIGUI", "launch_gui"]
