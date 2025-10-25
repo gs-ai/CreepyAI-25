@@ -34,7 +34,7 @@ class LocationPoint:
 class BasePlugin:
     """Base class for all CreepyAI plugins"""
     
-    def __init__(self, name: str, description: str):
+    def __init__(self, name: str, description: str, *, data_directory_name: Optional[str] = None):
         self.name = name
         self.description = description
         self._import_root = Path(get_user_data_dir()) / "imports"
