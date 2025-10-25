@@ -16,50 +16,25 @@ CreepyAI is an open-source OSINT (Open Source Intelligence) assistant designed t
 
 ### Installation
 
-1. **Using the setup script (recommended)**:
+1. **Create an environment**
    ```bash
-   chmod +x setup_creepyai.sh
-   ./setup_creepyai.sh
-   ```
-
-2. **Manual installation**:
-   ```bash
-   # With Conda
-   conda env create -f environment.yml
-   conda activate creepyai
-   
-   # OR with virtualenv
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-### Running the Application
+2. **Launch the desktop app**
+   ```bash
+   python app/main.py
+   ```
 
-Launch using the provided shell script:
-```bash
-chmod +x launch_macos.sh
-./launch_macos.sh
-```
+### Prepare Offline Datasets
 
-On Windows:
-```bash
-launch_windows.bat
-```
-
-## Usage
-
-1. Start by creating a new project or opening an existing one
-2. Configure your search parameters in the Search tab
-3. Execute the search and review results
-4. Analyze data using the Analysis tab
-5. Generate reports as needed
-
-## Configuration
-
-CreepyAI uses a configuration file located at `~/.config/creepyai/config.json`. You can modify settings through the application's Preferences dialog or by directly editing this file.
-
-## Plugins
+1. Place exported archives for each plugin inside its managed ingest directory. CreepyAI-25 provisions the
+   folders automatically on first launch:
+   - **Linux**: `~/.local/share/CreepyAI/imports/<plugin_source>`
+   - **macOS**: `~/Library/Application Support/CreepyAI/imports/<plugin_source>`
+   - **Windows**: `%APPDATA%\CreepyAI\imports\<plugin_source>`
 
 CreepyAI supports plugins to extend its functionality. Plugins are stored in `~/.config/creepyai/plugins/` by default.
 
@@ -90,61 +65,67 @@ If you encounter Qt/PyQt5 errors:
 
 1. **Run the diagnostic tool**:
    ```bash
-   python launch_creepyai.py --diagnose-qt
+   python scripts/collect_social_media_data.py
    ```
+   The collector downloads public location intelligence, deduplicates the payload, and stores a
+   `collected_locations.json` file in each plugin directory.
 
-2. **For Conda environments with PyQt5 problems**:
-   ```bash
-   chmod +x fix_pyqt_conda.sh
-   ./fix_pyqt_conda.sh
-   ```
+### Run Local LLM Analysis
 
-3. **Common issues**:
-   - **Multiple Qt installations**: Use a clean virtual environment
-   - **Missing plugins**: Run the fix script or reinstall PyQt5 and PyQtWebEngine
-   - **macOS specific**: Clear any conflicting Qt environment variables
-
-### Building from Source
-
-Use the build script:
-```bash
-python build_creepyai.py --package
-```
-
-Options:
-- `--package`: Create executable package
-- `--docs`: Build documentation
-- `--clean`: Clean build artifacts
-
-## Development
-
-### Project Structure
-
-- `gui/`: User interface implementations
-- `plugins/`: Plugin system for data sources
-- `resources/`: Application resources
-- `docs/`: Documentation
-
-### Building Documentation
+Use the new analysis CLI to correlate records and surface investigative leads with locally installed
+Ollama models:
 
 ```bash
-python build_creepyai.py --docs
+python scripts/analyze_intelligence.py "Subject Name" --focus "recent activity"
 ```
 
-## Contributing
+The command prints a structured summary, hotspot locations, and raw model outputs. Pass `--output json` to
+emit machine-readable results or `--models` to specify a custom subset of installed models.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+#### Recommended Ollama Models for MacBook Air M2 (16 GB RAM)
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+| Model Tag           | Approx. Size | Why it works well |
+|---------------------|--------------|-------------------|
+| `llama3.2:latest`   | ~2.0 GB      | Efficient distilled Llama 3.2 variant delivering balanced reasoning speed on Apple Silicon. |
+| `phi4-mini:latest`  | ~2.5 GB      | Lightweight Phi-4 Mini tuned for investigative assistance with minimal memory footprint. |
+| `wizardlm2:7b`      | ~4.1 GB      | Instruction-tuned WizardLM 2 model that excels at synthesising cross-source findings locally. |
+
+All models are available through Ollama and operate entirely on-device.
+
+## Additional Tooling
+
+- `scripts/analyze_intelligence.py` – run local LLM-driven analysis across collected datasets.
+- `scripts/collect_social_media_data.py` – maintain curated, deduplicated location payloads per plugin.
+- `scripts/download_icons.py` – regenerate UI icons using canonical naming.
+
+## Development Notes
+
+- The plugin framework lives under `app/plugins/` with shared ingestion utilities in `app/plugins/base_plugin.py`.
+- Social media plugins share infrastructure in `app/plugins/social_media/` and rely on the managed ingest
+  directories created at runtime.
+- New analysis helpers (data loading, local LLM orchestration, relationship graphing) are provided in
+  `app/analysis/`.
+
+### Testing
+
+```bash
+pytest
+```
+
+### Contributing
+
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes (`git commit -m "Add some amazing feature"`).
+4. Push to the branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+CreepyAI-25 is released under the MIT License – see `LICENSE` for details.
 
 ## Disclaimer
 
-This tool is intended for legal OSINT research purposes only. Users are responsible for compliance with applicable laws and regulations. The authors are not responsible for any misuse of this software.
+CreepyAI-25 is intended for lawful OSINT research by authorised practitioners. Ensure compliance with
+applicable legislation, organisational policy, and terms of service for any datasets you ingest. The authors
+are not responsible for misuse of this software.

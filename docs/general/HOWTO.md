@@ -1,4 +1,4 @@
-# CreepyAI - Complete User Guide
+# CreepyAI-25 - Complete User Guide
 
 ## Table of Contents
 
