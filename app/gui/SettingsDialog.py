@@ -64,15 +64,23 @@ class SettingsDialog(QDialog):
         map_layout = QFormLayout()
         
         self.map_provider = QComboBox()
-        self.map_provider.addItems(["OpenStreetMap", "Google Maps", "Mapbox"])
+        self.map_provider.addItems(["OpenStreetMap (offline friendly)"])
+        self.map_provider.setCurrentIndex(0)
+        self.map_provider.setEnabled(False)
         map_layout.addRow("Map Provider:", self.map_provider)
         
-        self.api_key = QLineEdit()
-        map_layout.addRow("API Key:", self.api_key)
-        
+        self.map_info = QLabel(
+            "CreepyAI ships with offline-friendly OpenStreetMap tiles and does not "
+            "require map API keys."
+        )
+        self.map_info.setWordWrap(True)
+        map_layout.addRow("", self.map_info)
+
         self.cache_maps = QCheckBox("Cache map tiles")
+        self.cache_maps.setChecked(True)
+        self.cache_maps.setEnabled(False)
         map_layout.addRow("", self.cache_maps)
-        
+
         self.map_tab.setLayout(map_layout)
         
         # Add tabs
@@ -98,7 +106,6 @@ class SettingsDialog(QDialog):
                 remember_recent = self.config_manager.get('remember_recent', True)
                 max_recent = self.config_manager.get('max_recent', 10)
                 map_provider = self.config_manager.get('map_provider', "OpenStreetMap")
-                api_key = self.config_manager.get('map_api_key', "")
                 cache_maps = self.config_manager.get('cache_maps', True)
                 
                 # Set values in UI
@@ -108,7 +115,6 @@ class SettingsDialog(QDialog):
                 index = self.map_provider.findText(map_provider)
                 if index >= 0:
                     self.map_provider.setCurrentIndex(index)
-                self.api_key.setText(api_key)
                 self.cache_maps.setChecked(cache_maps)
             
         except Exception as e:
@@ -124,7 +130,6 @@ class SettingsDialog(QDialog):
                 self.config_manager.set('remember_recent', self.remember_recent.isChecked())
                 self.config_manager.set('max_recent', self.max_recent.value())
                 self.config_manager.set('map_provider', self.map_provider.currentText())
-                self.config_manager.set('map_api_key', self.api_key.text())
                 self.config_manager.set('cache_maps', self.cache_maps.isChecked())
                 
                 # Save config to disk
