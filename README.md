@@ -6,6 +6,7 @@ CreepyAI is an open-source OSINT (Open Source Intelligence) assistant designed t
 ## Features
 
 - **Multi-platform Search**: Query multiple sources simultaneously
+- **Credential-free Operation**: Work entirely with offline data exports and open data sources—no API keys or logins required
 - **Data Visualization**: Visualize relationships between data points
 - **Project Management**: Save and organize your research
 - **Plugin System**: Extend functionality with custom plugins
@@ -61,6 +62,26 @@ CreepyAI uses a configuration file located at `~/.config/creepyai/config.json`. 
 ## Plugins
 
 CreepyAI supports plugins to extend its functionality. Plugins are stored in `~/.config/creepyai/plugins/` by default.
+
+### Offline Data Imports
+
+Each plugin now watches a dedicated ingest directory so you no longer need to browse for exports manually. Drop your ZIP archives or extracted folders into the matching subdirectory and enable the plugin's checkbox.
+
+- **Linux**: `~/.local/share/creepyai/imports/<plugin_source>`
+- **macOS**: `~/Library/Application Support/CreepyAI/imports/<plugin_source>`
+- **Windows**: `%APPDATA%\CreepyAI\imports\<plugin_source>`
+
+For social media connectors the `<plugin_source>` matches the canonical site host (for example, `Facebook` → `facebook.com`, `Instagram` → `instagram.com`). This ensures each plugin owns a dedicated folder ready to accept freshly collected OSINT datasets with no manual browsing.
+
+### Automated Social Media Data Collection
+
+Run the collector to gather credential-free location intelligence from public data sources tied to each social media plugin:
+
+```bash
+python scripts/collect_social_media_data.py
+```
+
+The command downloads and deduplicates records into each plugin's managed directory (for example `~/.local/share/creepyai/imports/facebook.com/collected_locations.json`). Plugins automatically prioritise these curated datasets when generating map overlays.
 
 ### Creating Plugins
 
