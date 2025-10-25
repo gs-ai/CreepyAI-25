@@ -1,54 +1,41 @@
-import os
 import json
-import glob
 import logging
-import zipfile
 import re
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.plugins.base_plugin import LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class SnapchatPlugin(BasePlugin):
-    def __init__(self):
+class SnapchatPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Snapchat",
-            description="Extract location data from Snapchat data exports without API"
+            description="Extract location data from Snapchat data exports without API",
+            temp_subdir="temp_snapchat_extract",
         )
         self.geocoder = GeocodingHelper()
     
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir:
-            return False, "Snapchat data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"Snapchat data directory does not exist: {data_dir}"
-            
-        return True, "SnapchatPlugin is configured"
-    
+        if self.has_input_data():
+            return True, "Snapchat plugin is configured"
+
+        memories_json = self.config.get("memories_json", "")
+        if memories_json:
+            candidate = Path(memories_json).expanduser()
+            if candidate.exists():
+                return True, "Snapchat plugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add Snapchat exports to {data_dir}"
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
-            {
-                "name": "data_directory",
-                "display_name": "Snapchat Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Snapchat data export"
-            },
-            {
-                "name": "memories_json",
-                "display_name": "Memories JSON File",
-                "type": "file",
-                "default": "",
-                "required": False,
-                "description": "Path to the memories.json file if not in the data directory"
-            },
             {
                 "name": "process_memories",
                 "display_name": "Process Memories",
@@ -80,56 +67,50 @@ class SnapchatPlugin(BasePlugin):
         Returns:
             List of LocationPoint objects
         """
-        locations = []
-        data_dir = self.config.get("data_directory", "")
+        locations: List[LocationPoint] = []
+        archive_root = self.resolve_archive_root()
         memories_json = self.config.get("memories_json", "")
         process_memories = self.config.get("process_memories", True)
         process_stories = self.config.get("process_stories", True)
-        
-        # If neither the data directory nor memories file exists, return empty list
-        if (not data_dir or not os.path.exists(data_dir)) and (not memories_json or not os.path.exists(memories_json)):
-            logger.warning("No valid data directory or memories file found")
+
+        configured_memories: Optional[Path] = None
+        if memories_json:
+            candidate = Path(memories_json).expanduser()
+            if candidate.exists():
+                configured_memories = candidate
+
+        if archive_root is None and configured_memories is None:
+            logger.warning("No valid Snapchat archive directory or memories file found")
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            try:
-                with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                    temp_dir = os.path.join(self.data_dir, "temp_snapchat_extract")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_ref.extractall(temp_dir)
-                    data_dir = temp_dir
-                    logger.info(f"Extracted Snapchat ZIP archive to {temp_dir}")
-            except Exception as e:
-                logger.error(f"Failed to extract Snapchat ZIP archive: {e}")
-                return locations
-        
+
         # Process Snapchat Memories
         if process_memories:
-            # Find memories.json file
-            memories_files = []
-            if memories_json and os.path.exists(memories_json):
-                memories_files.append(memories_json)
-            elif data_dir:
-                memories_files.extend(glob.glob(os.path.join(data_dir, "**/memories.json"), recursive=True))
-                memories_files.extend(glob.glob(os.path.join(data_dir, "**/memories_history.json"), recursive=True))
-            
-            # Process each memories file found
+            memories_files: List[Path] = []
+            if configured_memories is not None:
+                memories_files.append(configured_memories)
+            if archive_root is not None:
+                memories_patterns = ["**/memories.json", "**/memories_history.json"]
+                memories_files.extend(self.iter_data_files(archive_root, memories_patterns))
+
             for memories_file in memories_files:
                 memory_locations = self._extract_memories_locations(memories_file, date_from, date_to)
                 locations.extend(memory_locations)
-                logger.info(f"Extracted {len(memory_locations)} locations from memories file {memories_file}")
-        
+                logger.info(
+                    "Extracted %d locations from memories file %s",
+                    len(memory_locations),
+                    memories_file,
+                )
+
         # Process Snapchat Stories
-        if process_stories and data_dir:
-            story_locations = self._extract_story_locations(data_dir, date_from, date_to)
+        if process_stories and archive_root is not None:
+            story_locations = self._extract_story_locations(archive_root, date_from, date_to)
             locations.extend(story_locations)
-            logger.info(f"Extracted {len(story_locations)} locations from story files")
+            logger.info("Extracted %d locations from story files", len(story_locations))
                 
         logger.info(f"Total Snapchat locations found: {len(locations)}")
         return locations
     
-    def _extract_memories_locations(self, file_path: str, date_from: Optional[datetime], 
+    def _extract_memories_locations(self, file_path: Path, date_from: Optional[datetime],
                                    date_to: Optional[datetime]) -> List[LocationPoint]:
         """
         Extract location data from Snapchat memories file
@@ -145,7 +126,7 @@ class SnapchatPlugin(BasePlugin):
         locations = []
         
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with file_path.open('r', encoding='utf-8') as f:
                 data = json.load(f)
             
             # Check different possible formats
@@ -259,11 +240,11 @@ class SnapchatPlugin(BasePlugin):
                 )
                 
         except Exception as e:
-            logger.error(f"Error processing Snapchat memories file {file_path}: {e}")
+            logger.error("Error processing Snapchat memories file %s: %s", file_path, e)
             
         return locations
     
-    def _extract_story_locations(self, data_dir: str, date_from: Optional[datetime], 
+    def _extract_story_locations(self, data_dir: Path, date_from: Optional[datetime],
                                 date_to: Optional[datetime]) -> List[LocationPoint]:
         """
         Extract location data from Snapchat stories
@@ -276,16 +257,19 @@ class SnapchatPlugin(BasePlugin):
         Returns:
             List of LocationPoint objects
         """
-        locations = []
-        
+        locations: List[LocationPoint] = []
+
         # Look for story data files
-        story_files = glob.glob(os.path.join(data_dir, "**/story_history.json"), recursive=True)
-        story_files.extend(glob.glob(os.path.join(data_dir, "**/stories.json"), recursive=True))
-        story_files.extend(glob.glob(os.path.join(data_dir, "**/user_stories.json"), recursive=True))
-        
+        story_patterns = [
+            "**/story_history.json",
+            "**/stories.json",
+            "**/user_stories.json",
+        ]
+        story_files = list(self.iter_data_files(data_dir, story_patterns))
+
         for story_file in story_files:
             try:
-                with open(story_file, 'r', encoding='utf-8') as f:
+                with story_file.open('r', encoding='utf-8') as f:
                     data = json.load(f)
                 
                 # Check different possible formats
@@ -426,15 +410,20 @@ class SnapchatPlugin(BasePlugin):
         Returns:
             List of matching target dictionaries
         """
-        targets = []
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir or not os.path.exists(data_dir):
+        targets: List[Dict[str, Any]] = []
+        archive_root = self.resolve_archive_root()
+        memories_json = self.config.get("memories_json", "")
+
+        has_memories_file = False
+        if memories_json:
+            candidate = Path(memories_json).expanduser()
+            has_memories_file = candidate.exists()
+
+        if archive_root is None and not has_memories_file:
             return targets
-        
-        # Look for target in location names in memories and stories
-        locations = self.collect_locations(data_dir)
-        
+
+        locations = self.collect_locations(target="")
+
         for location in locations:
             if search_term.lower() in location.context.lower():
                 targets.append({

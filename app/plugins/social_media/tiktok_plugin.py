@@ -1,45 +1,28 @@
-import os
-import json
 import glob
+import json
+import logging
+import os
 import re
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple
-import zipfile
-import logging
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.plugins.base_plugin import LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class TikTokPlugin(BasePlugin):
-    def __init__(self):
+class TikTokPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="TikTok",
-            description="Extract location data from TikTok data export without API"
+            description="Extract location data from TikTok data export without API",
+            temp_subdir="temp_tiktok_extract",
         )
         self.geocoder = GeocodingHelper()
-    
-    def is_configured(self) -> Tuple[bool, str]:
-        """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        if not data_dir:
-            return False, "TikTok data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"TikTok data directory does not exist: {data_dir}"
-            
-        return True, "TikTok plugin is configured"
-    
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
-            {
-                "name": "data_directory",
-                "display_name": "TikTok Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your TikTok data export"
-            },
             {
                 "name": "attempt_geocoding",
                 "display_name": "Attempt Geocoding",
@@ -53,26 +36,15 @@ class TikTokPlugin(BasePlugin):
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                           date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from TikTok data export"""
-        locations = []
-        data_dir = self.config.get("data_directory", "")
-        attempt_geocoding = self.config.get("attempt_geocoding", True)
-        
-        if not data_dir or not os.path.exists(data_dir):
+        locations: List[LocationPoint] = []
+
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             logger.warning("TikTok data directory not found")
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            try:
-                with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                    temp_dir = os.path.join(self.data_dir, "temp_tiktok_extract")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_ref.extractall(temp_dir)
-                    data_dir = temp_dir
-                    logger.info(f"Extracted TikTok ZIP archive to {temp_dir}")
-            except Exception as e:
-                logger.error(f"Failed to extract TikTok ZIP archive: {e}")
-                return locations
+
+        data_dir = str(archive_root)
+        attempt_geocoding = self.config.get("attempt_geocoding", True)
         
         # Look for different types of TikTok data files that might contain location data
         

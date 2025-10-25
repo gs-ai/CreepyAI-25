@@ -1,53 +1,54 @@
-import os
-import json
 import glob
-from datetime import datetime
-from typing import List, Dict, Any, Optional
-import zipfile
+import json
 import logging
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class TwitterPlugin(BasePlugin):
-    def __init__(self):
+class TwitterPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Twitter",
-            description="Extract location data from Twitter archive files without API"
+            description="Extract location data from Twitter archive files without API",
+            temp_subdir="temp_twitter_extract",
         )
     
     def is_configured(self):
-        # Check if the plugin is properly configured
-        return True, "TwitterPlugin is configured"
-    
+        legacy_archive = self.config.get("archive_location", "")
+        if legacy_archive and os.path.exists(legacy_archive):
+            return True, "TwitterPlugin is configured"
+
+        if self.has_input_data():
+            return True, "TwitterPlugin is configured"
+
+        data_dir = self.get_data_directory()
+        return False, f"Add Twitter exports to {data_dir}"
+
     def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "name": "archive_location",
-                "display_name": "Twitter Archive Location",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Twitter data archive (ZIP or extracted)"
-            }
-        ]
+        return []
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations = []
-        archive_location = self.config.get("archive_location", "")
-        
-        if not archive_location or not os.path.exists(archive_location):
-            return locations
-        
-        # Handle ZIP archives
-        if archive_location.endswith('.zip') and zipfile.is_zipfile(archive_location):
-            with zipfile.ZipFile(archive_location, 'r') as zip_ref:
-                temp_dir = os.path.join(self.data_dir, "temp_twitter_extract")
-                os.makedirs(temp_dir, exist_ok=True)
-                zip_ref.extractall(temp_dir)
-                archive_location = temp_dir
-        
+        locations: List[LocationPoint] = []
+        configured_archive = self.config.get("archive_location", "")
+
+        archive_location: Optional[str] = None
+        if configured_archive:
+            candidate = os.path.expanduser(configured_archive)
+            if os.path.exists(candidate):
+                archive_location = candidate
+
+        if archive_location is None:
+            archive_root = self.resolve_archive_root()
+            if archive_root is None:
+                return locations
+            archive_location = str(archive_root)
+
         # Look for tweet.js or tweets.json files
         tweet_files = []
         for pattern in ["**/tweet.js", "**/tweets.json", "**/tweet_*.js"]:

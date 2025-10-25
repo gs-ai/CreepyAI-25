@@ -1,87 +1,50 @@
-import os
 import json
-import glob
-from datetime import datetime
 import logging
-import zipfile
 import re
-from typing import List, Dict, Any, Optional, Tuple
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import codecs
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 from app.plugins.enhanced_geocoding_helper import EnhancedGeocodingHelper
 
 logger = logging.getLogger(__name__)
 
-class FacebookPlugin(BasePlugin):
-    def __init__(self):
+class FacebookPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Facebook",
-            description="Extract location data from Facebook data export without API"
+            description="Extract location data from Facebook data export without API",
+            temp_subdir="temp_facebook_extract",
         )
         self.geocoder = EnhancedGeocodingHelper()
-        self.temp_dir = None
-    
-    def is_configured(self) -> Tuple[bool, str]:
-        """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        if not data_dir:
-            return False, "Data directory not configured"
-        
-        if data_dir.endswith('.zip'):
-            if not os.path.isfile(data_dir):
-                return False, "ZIP file does not exist"
-        else:
-            if not os.path.isdir(data_dir):
-                return False, "Data directory does not exist"
-        
-        return True, "FacebookPlugin is configured"
-    
-    def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "name": "data_directory",
-                "display_name": "Facebook Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Facebook data export"
-            }
-        ]
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations = []
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir or not os.path.exists(data_dir):
+        locations: List[LocationPoint] = []
+
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             return locations
-            
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                self.temp_dir = os.path.join(self.data_dir, "temp_facebook_extract")
-                os.makedirs(self.temp_dir, exist_ok=True)
-                zip_ref.extractall(self.temp_dir)
-                data_dir = self.temp_dir
-        
-        location_files = []
-        
-        for pattern in [
-            "**/location_history.json", 
+
+        location_patterns = [
+            "**/location_history.json",
             "**/your_location_history.json",
             "**/location_history*.json",
             "**/places_visited.json",
-            "**/check-ins.json"
-        ]:
-            location_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
-        post_files = []
-        for pattern in ["**/posts*.json", "**/your_posts*.json"]:
-            post_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
+            "**/check-ins.json",
+        ]
+        location_files = list(self.iter_data_files(archive_root, location_patterns))
+
+        post_patterns = ["**/posts*.json", "**/your_posts*.json"]
+        post_files = list(self.iter_data_files(archive_root, post_patterns))
+
         for location_file in location_files:
             try:
-                with open(location_file, 'r', encoding='utf-8') as f:
+                with location_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 location_items = []
@@ -177,7 +140,7 @@ class FacebookPlugin(BasePlugin):
         
         for post_file in post_files:
             try:
-                with open(post_file, 'r', encoding='utf-8') as f:
+                with post_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 posts = []
@@ -264,35 +227,26 @@ class FacebookPlugin(BasePlugin):
     
     def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:
         targets = []
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir or not os.path.exists(data_dir):
+
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             return targets
-        
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                self.temp_dir = os.path.join(self.data_dir, "temp_facebook_extract")
-                os.makedirs(self.temp_dir, exist_ok=True)
-                zip_ref.extractall(self.temp_dir)
-                data_dir = self.temp_dir
-        
-        location_files = []
-        for pattern in [
-            "**/location_history.json", 
+
+        location_patterns = [
+            "**/location_history.json",
             "**/your_location_history.json",
             "**/location_history*.json",
             "**/places_visited.json",
-            "**/check-ins.json"
-        ]:
-            location_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
-        post_files = []
-        for pattern in ["**/posts*.json", "**/your_posts*.json"]:
-            post_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
+            "**/check-ins.json",
+        ]
+        location_files = list(self.iter_data_files(archive_root, location_patterns))
+
+        post_patterns = ["**/posts*.json", "**/your_posts*.json"]
+        post_files = list(self.iter_data_files(archive_root, post_patterns))
         
         for location_file in location_files:
             try:
-                with open(location_file, 'r', encoding='utf-8') as f:
+                with location_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 location_items = []
@@ -327,7 +281,7 @@ class FacebookPlugin(BasePlugin):
         
         for post_file in post_files:
             try:
-                with open(post_file, 'r', encoding='utf-8') as f:
+                with post_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 posts = []

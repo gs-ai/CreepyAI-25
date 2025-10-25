@@ -1,78 +1,39 @@
-import os
 import json
-import glob
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple
-import zipfile
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class InstagramPlugin(BasePlugin):
-    def __init__(self):
+class InstagramPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Instagram",
-            description="Extract location data from Instagram data export without API"
+            description="Extract location data from Instagram data export without API",
+            temp_subdir="temp_instagram_extract",
         )
-    
-    def is_configured(self) -> Tuple[bool, str]:
-        """Check if the plugin is properly configured"""
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir:
-            return False, "Instagram data directory not configured"
-            
-        if not os.path.exists(data_dir):
-            return False, f"Instagram data directory does not exist: {data_dir}"
-            
-        return True, "Instagram plugin is configured"
-    
-    def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "name": "data_directory",
-                "display_name": "Instagram Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Instagram data export"
-            }
-        ]
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from Instagram data export"""
-        locations = []
-        data_dir = self.config.get("data_directory", "")
-        
-        if not data_dir or not os.path.exists(data_dir):
+        locations: List[LocationPoint] = []
+
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             logger.warning("Instagram data directory not found")
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            try:
-                with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                    temp_dir = os.path.join(self.data_dir, "temp_instagram_extract")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_ref.extractall(temp_dir)
-                    data_dir = temp_dir
-                    logger.info(f"Extracted Instagram ZIP archive to {temp_dir}")
-            except Exception as e:
-                logger.error(f"Failed to extract Instagram ZIP archive: {e}")
-                return locations
-        
-        # Look for media files that contain location data
-        media_files = []
-        for pattern in ["**/media.json", "**/posts_1.json", "**/posts*.json"]:
-            media_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
-        logger.info(f"Found {len(media_files)} Instagram media files")
+
+        media_patterns = ["**/media.json", "**/posts_1.json", "**/posts*.json"]
+        media_files = list(self.iter_data_files(archive_root, media_patterns))
+
+        logger.info("Found %d Instagram media files", len(media_files))
         
         for media_file in media_files:
             try:
-                with open(media_file, 'r', encoding='utf-8') as f:
+                with media_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 # Handle different archive formats

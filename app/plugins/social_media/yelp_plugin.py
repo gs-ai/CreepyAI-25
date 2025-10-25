@@ -1,36 +1,29 @@
-import os
-import json
-import glob
 import csv
+import glob
+import json
+import os
 import re
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-import zipfile
-from app.plugins.base_plugin import BasePlugin, LocationPoint
-from app.plugins.geocoding_helper import GeocodingHelper
+from typing import Any, Dict, List, Optional, Tuple
 
-class YelpPlugin(BasePlugin):
-    def __init__(self):
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
+
+class YelpPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Yelp",
-            description="Extract location data from Yelp data exports without API"
+            description="Extract location data from Yelp data exports without API",
+            temp_subdir="temp_yelp_extract",
         )
         self.geocoder = GeocodingHelper()
-    
-    def is_configured(self):
-        # Check if the plugin is properly configured
-        return True, "YelpPlugin is configured"
+
+    def is_configured(self) -> Tuple[bool, str]:
+        return super().is_configured()
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
-            {
-                "name": "data_directory",
-                "display_name": "Yelp Data Directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": "Directory containing your Yelp data export or saved reviews/bookmarks"
-            },
             {
                 "name": "attempt_geocoding",
                 "display_name": "Attempt Geocoding",
@@ -41,35 +34,38 @@ class YelpPlugin(BasePlugin):
             }
         ]
     
-    def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
-                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations = []
-        data_dir = self.config.get("data_directory", "")
-        attempt_geocoding = self.config.get("attempt_geocoding", True)
-        
-        if not data_dir or not os.path.exists(data_dir):
+    def collect_locations(
+        self,
+        target: str,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+    ) -> List[LocationPoint]:
+        locations: List[LocationPoint] = []
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                temp_dir = os.path.join(self.data_dir, "temp_yelp_extract")
-                os.makedirs(temp_dir, exist_ok=True)
-                zip_ref.extractall(temp_dir)
-                data_dir = temp_dir
-                
+
+        data_dir = str(archive_root)
+        attempt_geocoding = self.config.get("attempt_geocoding", True)
+
         # Process JSON files (Yelp user data exports)
-        json_locations = self._process_json_files(data_dir, target, attempt_geocoding, date_from, date_to)
+        json_locations = self._process_json_files(
+            data_dir, target, attempt_geocoding, date_from, date_to
+        )
         locations.extend(json_locations)
-        
+
         # Process CSV files (saved business lists, reviews)
-        csv_locations = self._process_csv_files(data_dir, target, attempt_geocoding, date_from, date_to)
+        csv_locations = self._process_csv_files(
+            data_dir, target, attempt_geocoding, date_from, date_to
+        )
         locations.extend(csv_locations)
-        
+
         # Process bookmarks HTML files (saved from Yelp bookmarks page)
-        html_locations = self._process_html_files(data_dir, target, attempt_geocoding, date_from, date_to)
+        html_locations = self._process_html_files(
+            data_dir, target, attempt_geocoding, date_from, date_to
+        )
         locations.extend(html_locations)
-        
+
         return locations
     
     def _process_json_files(self, data_dir: str, target: str, attempt_geocoding: bool, 
