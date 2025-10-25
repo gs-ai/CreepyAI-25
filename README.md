@@ -1,7 +1,7 @@
 
 # CreepyAI-25
 
-CreepyAI is an open-source OSINT (Open Source Intelligence) assistant designed to help researchers, analysts, and cybersecurity professionals gather and analyze public information effectively.
+CreepyAI-25 is an open-source OSINT (Open Source Intelligence) assistant designed to help researchers, analysts, and cybersecurity professionals gather and analyze public information effectively.
 
 ## Features
 
