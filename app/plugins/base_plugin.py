@@ -40,9 +40,7 @@ class BasePlugin:
         self._import_root = Path(get_user_data_dir()) / "imports"
         self._import_root.mkdir(parents=True, exist_ok=True)
 
-        directory_name = self._normalise_directory_name(data_directory_name or self.name)
-
-        self._default_input_dir = self._import_root / directory_name
+        self._default_input_dir = self._import_root / self._slugify_name(self.name)
         self._default_input_dir.mkdir(parents=True, exist_ok=True)
 
         self.data_dir = os.path.join(
@@ -167,24 +165,6 @@ class BasePlugin:
         if not slug:
             slug = self.__class__.__name__.lower()
         return slug.lower()
-
-    def _normalise_directory_name(self, value: str) -> str:
-        if not value:
-            return self._slugify_name(self.name)
-
-        value = value.strip()
-        if not value:
-            return self._slugify_name(self.name)
-
-        # Prevent path traversal while preserving descriptive names (including dots)
-        value = value.replace("\\", "_").replace("/", "_")
-
-        # Avoid names consisting solely of dots after sanitisation
-        cleaned = value.strip(".")
-        if not cleaned:
-            return self._slugify_name(self.name)
-
-        return value
 
     def _extract_zipfile(self, zip_path: Path, temp_folder: str) -> str:
         target_dir = Path(self.data_dir) / temp_folder

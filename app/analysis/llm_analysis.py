@@ -33,19 +33,6 @@ SUPPORTED_LOCAL_LLM_MODELS: List[Dict[str, object]] = [
 ]
 
 
-DEFAULT_PROMPT_TEMPLATE = (
-    "You are an investigative assistant for CreepyAI-25. Analyse the provided"
-    " geospatial activity for {subject} with an {tone} tone and a {depth} level"
-    " of detail. Prioritise the focus, if supplied: {focus}. Use the summary"
-    " insights and record excerpts to build actionable findings that directly"
-    " support locating the subject.\n\nSummary context:\n{summary}\n\n"
-    "Records excerpt:\n{records}\n\nReturn a JSON object with keys"
-    " 'key_connections', 'priority_locations', and 'next_steps'. Each key"
-    " should map to a list of objects describing actionable insights with"
-    " confidence or rationale fields."
-)
-
-
 @dataclass
 class OllamaResponse:
     """Container for responses from the local Ollama API."""
@@ -110,10 +97,6 @@ class LocalLLMAnalyzer:
         models: Optional[Sequence[str]] = None,
         client: Optional[OllamaClient] = None,
         temperature: float = 0.2,
-        prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
-        default_tone: str = "objective",
-        default_depth: str = "balanced",
-        model_settings: Optional[Mapping[str, Mapping[str, object]]] = None,
         max_records: int = 75,
     ) -> None:
         if models is None:
@@ -121,12 +104,6 @@ class LocalLLMAnalyzer:
         self.models = list(models)
         self.client = client or OllamaClient()
         self.temperature = temperature
-        self.prompt_template = prompt_template
-        self.default_tone = default_tone
-        self.default_depth = default_depth
-        self.model_settings: Dict[str, Mapping[str, object]] = (
-            dict(model_settings) if model_settings else {}
-        )
         self.max_records = max_records
 
     def analyze_subject(
@@ -145,33 +122,15 @@ class LocalLLMAnalyzer:
         summary = _summarise_records(trimmed_records)
         graph = build_relationship_graph(subject, trimmed_records)
         graph_snapshot = _summarise_graph(graph)
-        generated_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+        prompt = _build_prompt(subject, prompt_payload, summary, focus=focus)
 
         model_results: List[Dict[str, object]] = []
         for model in self.models:
-            settings = dict(self.model_settings.get(model, {}))
-            tone = str(settings.get("tone", self.default_tone))
-            depth = str(settings.get("depth", self.default_depth))
-            model_prompt_template = str(
-                settings.get("prompt_template", self.prompt_template)
-            )
-            prompt = _build_prompt(
-                subject,
-                prompt_payload,
-                summary,
-                focus=focus,
-                tone=tone,
-                depth=depth,
-                template=model_prompt_template,
-            )
-            options = dict(settings.get("options", {}))
-            temperature = float(settings.get("temperature", self.temperature))
-            options.setdefault("temperature", temperature)
             try:
                 response = self.client.generate(
                     model=model,
                     prompt=prompt,
-                    options=options,
+                    options={"temperature": self.temperature},
                 )
             except Exception as exc:  # pragma: no cover - defensive path
                 logger.error("Failed to execute model %s: %s", model, exc)
@@ -181,10 +140,6 @@ class LocalLLMAnalyzer:
                         "error": str(exc),
                         "parsed": None,
                         "raw_response": None,
-                        "prompt": prompt,
-                        "options": options,
-                        "tone": tone,
-                        "depth": depth,
                     }
                 )
                 continue
@@ -196,11 +151,6 @@ class LocalLLMAnalyzer:
                     "response": response.response,
                     "parsed": parsed,
                     "started_at": response.created_at.isoformat(),
-                    "prompt": prompt,
-                    "options": options,
-                    "tone": tone,
-                    "depth": depth,
-                    "template": model_prompt_template,
                 }
             )
 
@@ -213,14 +163,6 @@ class LocalLLMAnalyzer:
             "record_summary": summary,
             "graph": graph_snapshot,
             "recommended_models": SUPPORTED_LOCAL_LLM_MODELS,
-            "generated_at": generated_at.isoformat(),
-            "prompt_template": self.prompt_template,
-            "default_settings": {
-                "temperature": self.temperature,
-                "tone": self.default_tone,
-                "depth": self.default_depth,
-                "max_records": self.max_records,
-            },
         }
 
 
@@ -348,24 +290,15 @@ def _build_prompt(
     summary: Dict[str, object],
     *,
     focus: Optional[str] = None,
-    tone: str = "objective",
-    depth: str = "balanced",
-    template: str = DEFAULT_PROMPT_TEMPLATE,
 ) -> str:
-    summary_json = json.dumps(summary, indent=2)
-    records_json = json.dumps(records, indent=2)
     payload = {
         "subject": subject,
         "focus": focus,
         "summary": summary,
         "records": records,
-        "instructions": template.format(
-            subject=subject,
-            focus=focus or "not specified",
-            summary=summary_json,
-            records=records_json,
-            tone=tone,
-            depth=depth,
+        "instructions": (
+            "Return a JSON object with keys 'key_connections', 'priority_locations', and 'next_steps'. "
+            "Each key should map to a list of objects describing actionable insights."
         ),
     }
     return json.dumps(payload, indent=2)
@@ -405,5 +338,4 @@ __all__ = [
     "OllamaClient",
     "LocalLLMAnalyzer",
     "build_relationship_graph",
-    "DEFAULT_PROMPT_TEMPLATE",
 ]

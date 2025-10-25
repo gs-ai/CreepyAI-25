@@ -27,4 +27,4 @@
 
 ### Offline GeoIP Lookups
 
-CreepyAI-25 relies on offline GeoIP lookups using a CSV dataset that **you** provide. Place the file at `~/.creepyai/data/GeoIPPlugin/geoip_database.csv` (or update the plugin configuration) and ensure it follows the `ip_start, ip_end, latitude, longitude, city, region, country` column format. This keeps the workflow credential-free while respecting licensing constraints on third-party datasets.
+CreepyAI includes an offline GeoIP plugin that reads a CSV database shipped with the application. The file lives in `~/.creepyai/data/GeoIPPlugin/geoip_database.csv` by default and can be replaced with any dataset that follows the `ip_start, ip_end, latitude, longitude, city, region, country` column format. A starter dataset is copied automatically so you can test lookups without configuring API keys or creating external accounts.
