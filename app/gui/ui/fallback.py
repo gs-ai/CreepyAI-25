@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QTabWidget, QListWidget, QListWidgetItem,
     QTextEdit, QToolBar, QAction, QStatusBar, QFileDialog,
-    QMessageBox, QApplication, QSplitter, QGroupBox, QFrame
+    QMessageBox, QApplication, QSplitter, QGroupBox, QFrame, QStyle
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon, QPixmap

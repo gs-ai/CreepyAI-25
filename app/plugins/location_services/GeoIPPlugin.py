@@ -1,8 +1,10 @@
 """Offline-only GeoIP plugin used by CreepyAI.
 
 This implementation provides deterministic IP to location lookups without
-contacting external services.  It consumes a user-supplied CSV database
-describing IP ranges and their associated coordinates.
+contacting external services.  It consumes a local CSV database describing IP
+ranges and their associated coordinates.  A small starter dataset is copied into
+``~/.creepyai/data/GeoIPPlugin/`` the first time the plugin runs so users can see
+results immediately while remaining fully offline.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from __future__ import annotations
 import csv
 import ipaddress
 import logging
+import shutil
 from bisect import bisect_right
 from dataclasses import replace
 from datetime import datetime
@@ -64,8 +67,8 @@ class GeoIPPlugin(BasePlugin):
                 "required": True,
                 "description": (
                     "Path to a CSV file with columns ip_start, ip_end, latitude, "
-                    "longitude, city, region, country.  Provide a dataset before "
-                    "running lookups."
+                    "longitude, city, region, country.  A starter dataset is "
+                    "created automatically if the file does not exist."
                 ),
             },
             {
@@ -90,7 +93,7 @@ class GeoIPPlugin(BasePlugin):
             try:
                 self._ensure_database_exists(path)
             except Exception as exc:  # pragma: no cover - defensive
-                logger.error("Unable to verify GeoIP dataset: %s", exc)
+                logger.error("Unable to create GeoIP sample dataset: %s", exc)
                 return False, f"GeoIP database is missing: {exc}"
 
         return True, "GeoIPPlugin is configured"
@@ -163,10 +166,25 @@ class GeoIPPlugin(BasePlugin):
         if path.exists():
             return
 
-        logger.warning(
-            "GeoIP dataset not found at %s; provide a CSV dataset before running lookups",
-            path,
+        sample_path = (
+            Path(__file__).resolve().parents[2]
+            / "resources"
+            / "samples"
+            / "geoip_sample.csv"
         )
+
+        if sample_path.exists():
+            shutil.copyfile(sample_path, path)
+            logger.info("Copied GeoIP sample dataset to %s", path)
+            return
+
+        # Fallback: create a dataset from the built-in known IPs.
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["ip_start", "ip_end", "latitude", "longitude", "city", "region", "country"])
+            for ip, (lat, lon, context) in self._KNOWN_IPS.items():
+                writer.writerow([ip, ip, lat, lon, context, "", ""])
+        logger.info("Generated minimal GeoIP dataset at %s", path)
 
     def _load_database(self) -> None:
         path = self._get_database_path()
@@ -174,14 +192,6 @@ class GeoIPPlugin(BasePlugin):
             mtime = path.stat().st_mtime
         except FileNotFoundError:
             self._ensure_database_exists(path)
-            if not path.exists():
-                with self._lock:
-                    self._database_path = path
-                    self._database_mtime = None
-                    self._range_starts = []
-                    self._ranges = []
-                    self._cache.clear()
-                return
             mtime = path.stat().st_mtime
 
         if self._database_path == path and self._database_mtime == mtime:

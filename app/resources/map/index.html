@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CreepyAI Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
@@ -135,12 +136,32 @@
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+    <!-- Qt WebChannel bridge for Python <-> JS communication -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script>
-        var map = L.map('map').setView([0, 0], 4);
+        // Initialize WebChannel to expose the Python MapController as `mapController`
+        if (typeof qt !== 'undefined' && qt && qt.webChannelTransport) {
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                window.mapController = channel.objects.mapController;
+                window.creepyAI = window.creepyAI || {};
+                window.creepyAI.bridgeReady = true;
+            });
+        }
+    </script>
+    <script>
+    // Start centered on the continental USA
+    var map = L.map('map').setView([39.8283, -98.5795], 4);
         
         // Base layers
         var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+
+        // CartoDB Dark Matter basemap
+        var darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
         }).addTo(map);
         
         var satelliteLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -149,7 +170,8 @@
         
         var layers = {
             "Street Map": streetLayer,
-            "Satellite": satelliteLayer
+            "Satellite": satelliteLayer,
+            "Dark Mode": darkLayer
         };
         
         L.control.layers(layers).addTo(map);
@@ -229,6 +251,13 @@
         // Set map layer function
         window.creepyAI.setMapLayer = function(layerName) {
             if (layers[layerName]) {
+                // Remove existing base layers
+                Object.keys(layers).forEach(function(name) {
+                    if (map.hasLayer(layers[name])) {
+                        map.removeLayer(layers[name]);
+                    }
+                });
+                // Add requested layer
                 map.addLayer(layers[layerName]);
             }
         };
