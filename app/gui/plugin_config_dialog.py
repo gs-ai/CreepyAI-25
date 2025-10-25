@@ -5,6 +5,7 @@ Plugin configuration dialog for CreepyAI
 import os
 import sys
 import logging
+import html
 from PyQt5.QtWidgets import (
     QDialog, QDialogButtonBox, QVBoxLayout, QFormLayout, 
     QLabel, QLineEdit, QCheckBox, QComboBox, QPushButton,
@@ -59,6 +60,23 @@ class PluginConfigDialog(QDialog):
         header_label = QLabel(header_text)
         header_label.setWordWrap(True)
         layout.addWidget(header_label)
+
+        if hasattr(self.plugin, "get_data_directory"):
+            try:
+                data_directory = self.plugin.get_data_directory()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.debug("Failed to resolve plugin data directory: %s", exc)
+                data_directory = None
+
+            if data_directory:
+                info_label = QLabel(
+                    "<b>Drop your exported files here:</b><br><code>{}</code>".format(
+                        html.escape(data_directory)
+                    )
+                )
+                info_label.setWordWrap(True)
+                info_label.setTextFormat(Qt.RichText)
+                layout.addWidget(info_label)
         
         # Form for configuration options
         form_layout = QFormLayout()

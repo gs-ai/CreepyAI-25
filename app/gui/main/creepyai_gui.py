@@ -8,8 +8,10 @@ import os
 import logging
 import datetime
 import time
+from pathlib import Path
+from typing import Dict, List, Optional
 from PyQt5.QtWidgets import (
-    QMainWindow, QApplication, QMessageBox, QFileDialog, 
+    QMainWindow, QApplication, QMessageBox, QFileDialog,
     QProgressDialog, QMenu, QAction, QLabel, QStatusBar,
     QToolBar, QDialog, QVBoxLayout, QHBoxLayout
 )
@@ -18,6 +20,16 @@ from PyQt5.QtGui import QIcon, QPixmap, QFont
 
 # Import internal modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from app.analysis import (
+    DEFAULT_PROMPT_TEMPLATE,
+    LocalLLMAnalyzer,
+    SUPPORTED_LOCAL_LLM_MODELS,
+    get_default_history_dir,
+    load_recent_history,
+    load_social_media_records,
+    persist_analysis_result,
+)
+from app.gui.LLMAnalysisDialog import LLMAnalysisDialog
 from app.models.Database import Database
 from app.models.Location import Location
 from app.models.Project import Project
@@ -317,13 +329,200 @@ class CreepyMainWindow(QMainWindow):
         """Show about dialog."""
         dialog = AboutDialog(self)
         dialog.exec_()
-    
+
+    def _build_analysis_settings(self) -> Dict[str, object]:
+        """Collect analysis settings from the configuration manager."""
+
+        default_temperature = 0.2
+        default_tone = "objective"
+        default_depth = "balanced"
+        prompt_template = DEFAULT_PROMPT_TEMPLATE
+        overrides_list: List[Dict[str, object]] = []
+        selected_models: List[str] = []
+        max_records = 75
+        history_override: Optional[str] = None
+        base_data_dir: Optional[Path] = None
+
+        if self.config_manager:
+            temp_value = self.config_manager.get('analysis.default_temperature', default_temperature)
+            try:
+                default_temperature = float(temp_value)
+            except (TypeError, ValueError):
+                default_temperature = 0.2
+
+            tone_value = self.config_manager.get('analysis.default_tone', default_tone)
+            if tone_value:
+                default_tone = str(tone_value)
+
+            depth_value = self.config_manager.get('analysis.default_depth', default_depth)
+            if depth_value:
+                default_depth = str(depth_value)
+
+            template_value = self.config_manager.get('analysis.prompt_template', prompt_template)
+            if template_value:
+                prompt_template = str(template_value)
+
+            overrides_value = self.config_manager.get('analysis.model_overrides', [])
+            if isinstance(overrides_value, list):
+                overrides_list = overrides_value
+
+            models_value = self.config_manager.get('analysis.models', [])
+            if isinstance(models_value, list):
+                selected_models = [str(model).strip() for model in models_value if str(model).strip()]
+
+            history_override = self.config_manager.get('analysis.history_dir', '')
+            data_dir_value = self.config_manager.get('data_dir', '')
+            if data_dir_value:
+                base_data_dir = Path(str(data_dir_value))
+
+            max_records_value = self.config_manager.get('analysis.max_records', max_records)
+            try:
+                max_records = int(max_records_value)
+            except (TypeError, ValueError):
+                max_records = 75
+
+        if history_override:
+            history_dir = Path(str(history_override))
+        else:
+            history_dir = get_default_history_dir(base_data_dir)
+
+        model_settings: Dict[str, Dict[str, object]] = {}
+        ordered_models: List[str] = []
+
+        for entry in overrides_list:
+            model_name = str(entry.get('model', '')).strip()
+            if not model_name:
+                continue
+
+            config: Dict[str, object] = {}
+            try:
+                if entry.get('temperature') is not None:
+                    config['temperature'] = float(entry['temperature'])
+            except (TypeError, ValueError):
+                pass
+
+            tone_override = entry.get('tone')
+            if tone_override:
+                config['tone'] = str(tone_override)
+
+            depth_override = entry.get('depth')
+            if depth_override:
+                config['depth'] = str(depth_override)
+
+            prompt_override = entry.get('prompt_override')
+            if prompt_override:
+                config['prompt_template'] = str(prompt_override)
+
+            if config:
+                model_settings[model_name] = config
+
+            ordered_models.append(model_name)
+
+        if selected_models:
+            ordered_models = selected_models + [model for model in ordered_models if model not in selected_models]
+
+        if not ordered_models:
+            ordered_models = [
+                str(item.get('name'))
+                for item in SUPPORTED_LOCAL_LLM_MODELS
+                if item.get('name')
+            ]
+
+        unique_models: List[str] = []
+        for name in ordered_models:
+            if name and name not in unique_models:
+                unique_models.append(name)
+
+        return {
+            'temperature': default_temperature,
+            'tone': default_tone,
+            'depth': default_depth,
+            'prompt_template': prompt_template,
+            'model_settings': model_settings,
+            'models': unique_models,
+            'history_dir': history_dir,
+            'max_records': max_records,
+        }
+
     def analyze_data(self):
-        """Perform analysis on the project data."""
-        if not self.current_project or self.current_project.locations.count() == 0:
-            QMessageBox.information(self, "No Data", "No location data available to analyze.")
+        """Perform analysis on the project data using local LLMs."""
+
+        if not self.current_project:
+            QMessageBox.information(self, "No Project", "Open or create a project before running analysis.")
             return
-        QMessageBox.information(self, "Analysis", "Analysis feature not implemented yet.")
+
+        try:
+            settings = self._build_analysis_settings()
+            records = load_social_media_records(limit_per_plugin=settings['max_records'])
+        except Exception as exc:
+            logger.exception("Failed to load curated datasets: %s", exc)
+            QMessageBox.critical(self, "Analysis Error", f"Failed to load curated datasets: {exc}")
+            return
+
+        if not records:
+            QMessageBox.information(
+                self,
+                "No Curated Data",
+                "No curated social media datasets were found. Collect new data before running analysis.",
+            )
+            return
+
+        analyzer = LocalLLMAnalyzer(
+            models=settings['models'],
+            max_records=settings['max_records'],
+            temperature=settings['temperature'],
+            prompt_template=settings['prompt_template'],
+            default_tone=settings['tone'],
+            default_depth=settings['depth'],
+            model_settings=settings['model_settings'],
+        )
+
+        subject = self.current_project.name or "Investigation"
+        focus = self.current_project.description or None
+
+        progress = QProgressDialog("Running local LLM analysis...", None, 0, 0, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setCancelButton(None)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+
+        try:
+            result = analyzer.analyze_subject(subject, records, focus=focus)
+        except Exception as exc:
+            logger.exception("Local LLM analysis failed: %s", exc)
+            QMessageBox.critical(self, "Analysis Error", f"Local LLM analysis failed: {exc}")
+            progress.close()
+            return
+        finally:
+            progress.close()
+
+        history_dir: Path = settings['history_dir']
+        saved_entry = None
+        try:
+            saved_entry = persist_analysis_result(history_dir, result)
+            result['integrity'] = saved_entry.integrity
+            result['history_path'] = str(saved_entry.file_path)
+        except Exception as exc:
+            logger.exception("Failed to persist analysis result: %s", exc)
+            QMessageBox.warning(
+                self,
+                "History Warning",
+                f"Analysis completed but saving the result failed: {exc}",
+            )
+
+        history_entries = load_recent_history(history_dir, limit=10)
+        if saved_entry is not None:
+            history_entries = [saved_entry] + [
+                entry for entry in history_entries if entry.file_path != saved_entry.file_path
+            ]
+
+        dialog = LLMAnalysisDialog(self)
+        dialog.set_analysis_results(result, history_entries, saved_entry)
+        dialog.exec_()
+
+        if saved_entry is not None and hasattr(self, 'statusbar') and self.statusbar:
+            self.statusbar.showMessage(f"Analysis saved to {saved_entry.file_path}", 10000)
     
     def export_project(self, format="kml"):
         """Export project data."""

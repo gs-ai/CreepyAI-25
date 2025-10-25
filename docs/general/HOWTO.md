@@ -1,4 +1,4 @@
-# CreepyAI - Complete User Guide
+# CreepyAI-25 - Complete User Guide
 
 ## Table of Contents
 
@@ -19,6 +19,12 @@
 - Python 3.6+
 - pip package manager
 - Internet connection
-- API keys for the services you plan to use
+- No API keys are required for the bundled tools
 
 ### Quick Install
+
+## Using Plugins
+
+### Offline GeoIP Lookups
+
+CreepyAI-25 relies on offline GeoIP lookups using a CSV dataset that **you** provide. Place the file at `~/.creepyai/data/GeoIPPlugin/geoip_database.csv` (or update the plugin configuration) and ensure it follows the `ip_start, ip_end, latitude, longitude, city, region, country` column format. This keeps the workflow credential-free while respecting licensing constraints on third-party datasets.
