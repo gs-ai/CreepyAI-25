@@ -1,12 +1,11 @@
-"""
-CreepyAI Social Media Plugins
-"""
+"""Social media plugin exports and registry."""
+
+from __future__ import annotations
+
 import logging
+from typing import Dict, Type
 
-# Configure plugin-specific logger
-logger = logging.getLogger('creepyai.plugins.social_media')
-
-# Import all social media plugins
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 from app.plugins.social_media.facebook_plugin import FacebookPlugin
 from app.plugins.social_media.instagram_plugin import InstagramPlugin
 from app.plugins.social_media.linkedin_plugin import LinkedInPlugin
@@ -16,28 +15,37 @@ from app.plugins.social_media.tiktok_plugin import TikTokPlugin
 from app.plugins.social_media.twitter_plugin import TwitterPlugin
 from app.plugins.social_media.yelp_plugin import YelpPlugin
 
-# List of all social media plugins to expose to the main application
-plugins = [
-    FacebookPlugin,
-    InstagramPlugin,
-    LinkedInPlugin,
-    PinterestPlugin,
-    SnapchatPlugin,
-    TikTokPlugin,
-    TwitterPlugin,
-    YelpPlugin
-]
+logger = logging.getLogger("creepyai.plugins.social_media")
+
+SOCIAL_MEDIA_PLUGINS: Dict[str, Type[ArchiveSocialMediaPlugin]] = {
+    "facebook": FacebookPlugin,
+    "instagram": InstagramPlugin,
+    "linkedin": LinkedInPlugin,
+    "pinterest": PinterestPlugin,
+    "snapchat": SnapchatPlugin,
+    "tiktok": TikTokPlugin,
+    "twitter": TwitterPlugin,
+    "yelp": YelpPlugin,
+}
+
+plugins = list(SOCIAL_MEDIA_PLUGINS.values())
 
 __all__ = [
-    'FacebookPlugin',
-    'InstagramPlugin',
-    'LinkedInPlugin',
-    'PinterestPlugin',
-    'SnapchatPlugin',
-    'TikTokPlugin', 
-    'TwitterPlugin',
-    'YelpPlugin',
-    'plugins'
+    "ArchiveSocialMediaPlugin",
+    "FacebookPlugin",
+    "InstagramPlugin",
+    "LinkedInPlugin",
+    "PinterestPlugin",
+    "SnapchatPlugin",
+    "TikTokPlugin",
+    "TwitterPlugin",
+    "YelpPlugin",
+    "SOCIAL_MEDIA_PLUGINS",
+    "plugins",
 ]
 
-logger.info(f"Loaded {len(plugins)} social media plugins")
+logger.info(
+    "Loaded %d social media plugins: %s",
+    len(plugins),
+    ", ".join(sorted(SOCIAL_MEDIA_PLUGINS)),
+)

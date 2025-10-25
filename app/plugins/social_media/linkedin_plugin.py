@@ -6,24 +6,27 @@ LinkedIn Plugin for CreepyAI
 Extracts location data from LinkedIn exports and profiles
 """
 
-from app.plugins.geocoding_helper import GeocodingHelper
-from app.plugins.base_plugin import BasePlugin, LocationPoint
-from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
-import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import json
 import logging
-import re
+
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class LinkedInPlugin(BasePlugin):
+class LinkedInPlugin(ArchiveSocialMediaPlugin):
     """Plugin for extracting location data from LinkedIn data"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="LinkedIn",
-            description="Extract location data from LinkedIn data exports and profiles"
+            description="Extract location data from LinkedIn data exports and profiles",
+            temp_subdir="temp_linkedin_extract",
         )
         self.version = "1.0.0"
         self.author = "CreepyAI Team"
@@ -90,23 +93,19 @@ class LinkedInPlugin(BasePlugin):
             data_dir = self.get_data_directory()
 
         # Process profile data
-        profile_locations = self._process_profile(data_dir)
-        locations.extend(profile_locations)
-        
+        locations.extend(self._process_profile(data_root))
+
         # Process connections if enabled
         if self.config.get("include_connections", True):
-            connection_locations = self._process_connections(data_dir)
-            locations.extend(connection_locations)
-        
+            locations.extend(self._process_connections(data_root))
+
         # Process job history if enabled
         if self.config.get("include_jobs", True):
-            job_locations = self._process_jobs(data_dir)
-            locations.extend(job_locations)
-        
+            locations.extend(self._process_jobs(data_root))
+
         # Process education history if enabled
         if self.config.get("include_education", True):
-            education_locations = self._process_education(data_dir)
-            locations.extend(education_locations)
+            locations.extend(self._process_education(data_root))
         
         # Apply date filtering
         if date_from or date_to:
@@ -118,18 +117,18 @@ class LinkedInPlugin(BasePlugin):
         
         return locations
     
-    def _process_profile(self, data_dir: str) -> List[LocationPoint]:
+    def _process_profile(self, data_dir: Path) -> List[LocationPoint]:
         """Extract locations from user's profile data"""
-        locations = []
-        
+        locations: List[LocationPoint] = []
+
         # Look for profile.json
-        profile_file = os.path.join(data_dir, 'profile.json')
-        if not os.path.exists(profile_file):
-            profile_file = os.path.join(data_dir, 'Profile.json')
-        
-        if os.path.exists(profile_file):
+        profile_file = data_dir / "profile.json"
+        if not profile_file.exists():
+            profile_file = data_dir / "Profile.json"
+
+        if profile_file.exists():
             try:
-                with open(profile_file, 'r', encoding='utf-8') as f:
+                with profile_file.open("r", encoding="utf-8") as f:
                     profile_data = json.load(f)
                 
                 # Extract user's location
@@ -152,19 +151,19 @@ class LinkedInPlugin(BasePlugin):
         
         return locations
     
-    def _process_connections(self, data_dir: str) -> List[LocationPoint]:
+    def _process_connections(self, data_dir: Path) -> List[LocationPoint]:
         """Extract locations from user's connections"""
-        locations = []
-        
+        locations: List[LocationPoint] = []
+
         # Look for connections.csv or Connections.csv
-        connections_file = os.path.join(data_dir, 'connections.csv')
-        if not os.path.exists(connections_file):
-            connections_file = os.path.join(data_dir, 'Connections.csv')
-        
-        if os.path.exists(connections_file):
+        connections_file = data_dir / "connections.csv"
+        if not connections_file.exists():
+            connections_file = data_dir / "Connections.csv"
+
+        if connections_file.exists():
             try:
                 import csv
-                with open(connections_file, 'r', encoding='utf-8') as f:
+                with connections_file.open("r", encoding="utf-8") as f:
                     reader = csv.DictReader(f)
                     for row in reader:
                         try:
@@ -223,21 +222,21 @@ class LinkedInPlugin(BasePlugin):
         
         return locations
     
-    def _process_jobs(self, data_dir: str) -> List[LocationPoint]:
+    def _process_jobs(self, data_dir: Path) -> List[LocationPoint]:
         """Extract locations from user's job history"""
-        locations = []
-        
+        locations: List[LocationPoint] = []
+
         # Look for positions.json or work_experience.json
-        jobs_file = None
-        for filename in ['positions.json', 'work_experience.json', 'Jobs.json']:
-            potential_file = os.path.join(data_dir, filename)
-            if os.path.exists(potential_file):
+        jobs_file: Optional[Path] = None
+        for filename in ["positions.json", "work_experience.json", "Jobs.json"]:
+            potential_file = data_dir / filename
+            if potential_file.exists():
                 jobs_file = potential_file
                 break
-        
-        if jobs_file:
+
+        if jobs_file is not None:
             try:
-                with open(jobs_file, 'r', encoding='utf-8') as f:
+                with jobs_file.open("r", encoding="utf-8") as f:
                     jobs_data = json.load(f)
                 
                 # Handle different formats
@@ -331,18 +330,18 @@ class LinkedInPlugin(BasePlugin):
         
         return locations
     
-    def _process_education(self, data_dir: str) -> List[LocationPoint]:
+    def _process_education(self, data_dir: Path) -> List[LocationPoint]:
         """Extract locations from user's education history"""
-        locations = []
-        
+        locations: List[LocationPoint] = []
+
         # Look for education.json or Education.json
-        education_file = os.path.join(data_dir, 'education.json')
-        if not os.path.exists(education_file):
-            education_file = os.path.join(data_dir, 'Education.json')
-        
-        if os.path.exists(education_file):
+        education_file = data_dir / "education.json"
+        if not education_file.exists():
+            education_file = data_dir / "Education.json"
+
+        if education_file.exists():
             try:
-                with open(education_file, 'r', encoding='utf-8') as f:
+                with education_file.open("r", encoding="utf-8") as f:
                     education_data = json.load(f)
                 
                 # Handle different formats

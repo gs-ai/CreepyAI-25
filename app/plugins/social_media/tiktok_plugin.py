@@ -1,20 +1,23 @@
-import os
-import json
 import glob
+import json
+import logging
+import os
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 import logging
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class TikTokPlugin(BasePlugin):
-    def __init__(self):
+class TikTokPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="TikTok",
-            description="Extract location data from TikTok data export without API"
+            description="Extract location data from TikTok data export without API",
+            temp_subdir="temp_tiktok_extract",
         )
         self.geocoder = GeocodingHelper()
     

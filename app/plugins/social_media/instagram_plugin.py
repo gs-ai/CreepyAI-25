@@ -1,6 +1,4 @@
-import os
 import json
-import glob
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
@@ -8,11 +6,12 @@ from app.plugins.base_plugin import BasePlugin, LocationPoint
 
 logger = logging.getLogger(__name__)
 
-class InstagramPlugin(BasePlugin):
-    def __init__(self):
+class InstagramPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Instagram",
-            description="Extract location data from Instagram data export without API"
+            description="Extract location data from Instagram data export without API",
+            temp_subdir="temp_instagram_extract",
         )
     
     def is_configured(self) -> Tuple[bool, str]:
@@ -49,7 +48,7 @@ class InstagramPlugin(BasePlugin):
         
         for media_file in media_files:
             try:
-                with open(media_file, 'r', encoding='utf-8') as f:
+                with media_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 # Handle different archive formats

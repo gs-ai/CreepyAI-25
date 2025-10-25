@@ -1,18 +1,22 @@
-import os
-import json
 import glob
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import logging
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class TwitterPlugin(BasePlugin):
-    def __init__(self):
+class TwitterPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Twitter",
-            description="Extract location data from Twitter archive files without API"
+            description="Extract location data from Twitter archive files without API",
+            temp_subdir="temp_twitter_extract",
         )
     
     def is_configured(self):

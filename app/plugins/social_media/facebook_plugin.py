@@ -1,22 +1,24 @@
-import os
 import json
-import glob
-from datetime import datetime
 import logging
 import re
-from typing import List, Dict, Any, Optional, Tuple
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import codecs
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+
+from app.plugins.base_plugin import LocationPoint
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 from app.plugins.enhanced_geocoding_helper import EnhancedGeocodingHelper
 
 logger = logging.getLogger(__name__)
 
-class FacebookPlugin(BasePlugin):
-    def __init__(self):
+class FacebookPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Facebook",
-            description="Extract location data from Facebook data export without API"
+            description="Extract location data from Facebook data export without API",
+            temp_subdir="temp_facebook_extract",
         )
         self.geocoder = EnhancedGeocodingHelper()
         self.temp_dir = None
@@ -50,17 +52,16 @@ class FacebookPlugin(BasePlugin):
             "**/your_location_history.json",
             "**/location_history*.json",
             "**/places_visited.json",
-            "**/check-ins.json"
-        ]:
-            location_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
-        post_files = []
-        for pattern in ["**/posts*.json", "**/your_posts*.json"]:
-            post_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
+            "**/check-ins.json",
+        ]
+        location_files = list(self.iter_data_files(archive_root, location_patterns))
+
+        post_patterns = ["**/posts*.json", "**/your_posts*.json"]
+        post_files = list(self.iter_data_files(archive_root, post_patterns))
+
         for location_file in location_files:
             try:
-                with open(location_file, 'r', encoding='utf-8') as f:
+                with location_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 location_items = []
@@ -156,7 +157,7 @@ class FacebookPlugin(BasePlugin):
         
         for post_file in post_files:
             try:
-                with open(post_file, 'r', encoding='utf-8') as f:
+                with post_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 posts = []
@@ -258,17 +259,16 @@ class FacebookPlugin(BasePlugin):
             "**/your_location_history.json",
             "**/location_history*.json",
             "**/places_visited.json",
-            "**/check-ins.json"
-        ]:
-            location_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
-        post_files = []
-        for pattern in ["**/posts*.json", "**/your_posts*.json"]:
-            post_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
+            "**/check-ins.json",
+        ]
+        location_files = list(self.iter_data_files(archive_root, location_patterns))
+
+        post_patterns = ["**/posts*.json", "**/your_posts*.json"]
+        post_files = list(self.iter_data_files(archive_root, post_patterns))
         
         for location_file in location_files:
             try:
-                with open(location_file, 'r', encoding='utf-8') as f:
+                with location_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 location_items = []
@@ -303,7 +303,7 @@ class FacebookPlugin(BasePlugin):
         
         for post_file in post_files:
             try:
-                with open(post_file, 'r', encoding='utf-8') as f:
+                with post_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 posts = []

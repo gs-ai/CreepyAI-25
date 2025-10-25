@@ -1,24 +1,25 @@
-import os
-import json
-import glob
 import csv
+import glob
+import json
+import os
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
-class YelpPlugin(BasePlugin):
-    def __init__(self):
+class YelpPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Yelp",
-            description="Extract location data from Yelp data exports without API"
+            description="Extract location data from Yelp data exports without API",
+            temp_subdir="temp_yelp_extract",
         )
         self.geocoder = GeocodingHelper()
-    
-    def is_configured(self):
-        # Check if the plugin is properly configured
-        return True, "YelpPlugin is configured"
+
+    def is_configured(self) -> Tuple[bool, str]:
+        return super().is_configured()
     
     def get_configuration_options(self) -> List[Dict[str, Any]]:
         return [
@@ -68,17 +69,23 @@ class YelpPlugin(BasePlugin):
             print(f"Error processing Yelp academic dataset: {e}")
                 
         # Process JSON files (Yelp user data exports)
-        json_locations = self._process_json_files(data_dir, target, attempt_geocoding, date_from, date_to)
+        json_locations = self._process_json_files(
+            data_dir, target, attempt_geocoding, date_from, date_to
+        )
         locations.extend(json_locations)
-        
+
         # Process CSV files (saved business lists, reviews)
-        csv_locations = self._process_csv_files(data_dir, target, attempt_geocoding, date_from, date_to)
+        csv_locations = self._process_csv_files(
+            data_dir, target, attempt_geocoding, date_from, date_to
+        )
         locations.extend(csv_locations)
-        
+
         # Process bookmarks HTML files (saved from Yelp bookmarks page)
-        html_locations = self._process_html_files(data_dir, target, attempt_geocoding, date_from, date_to)
+        html_locations = self._process_html_files(
+            data_dir, target, attempt_geocoding, date_from, date_to
+        )
         locations.extend(html_locations)
-        
+
         return locations
 
     def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:

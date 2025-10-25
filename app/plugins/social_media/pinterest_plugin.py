@@ -1,20 +1,20 @@
-import os
 import json
-import glob
-import re
 import logging
+import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
+from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 logger = logging.getLogger(__name__)
 
-class PinterestPlugin(BasePlugin):
-    def __init__(self):
+class PinterestPlugin(ArchiveSocialMediaPlugin):
+    def __init__(self) -> None:
         super().__init__(
             name="Pinterest",
-            description="Extract location data from Pinterest data exports without API"
+            description="Extract location data from Pinterest data exports without API",
+            temp_subdir="temp_pinterest_extract",
         )
         self.geocoder = GeocodingHelper()
     
@@ -38,7 +38,7 @@ class PinterestPlugin(BasePlugin):
             }
         ]
     
-    def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
+    def collect_locations(self, target: str, date_from: Optional[datetime] = None,
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """Collect location data from Pinterest data export"""
         locations = []
@@ -55,16 +55,15 @@ class PinterestPlugin(BasePlugin):
         
         # Look for Pinterest data files that may contain location information
         # 1. Pins data
-        pin_files = []
-        for pattern in ["**/pins*.json", "**/pins.json", "**/board_pins*.json"]:
-            pin_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-        
-        logger.info(f"Found {len(pin_files)} Pinterest pin files")
-        
+        pin_patterns = ["**/pins*.json", "**/pins.json", "**/board_pins*.json"]
+        pin_files = list(self.iter_data_files(archive_root, pin_patterns))
+
+        logger.info("Found %d Pinterest pin files", len(pin_files))
+
         # Process pin files
         for pin_file in pin_files:
             try:
-                with open(pin_file, 'r', encoding='utf-8') as f:
+                with pin_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 
                 # Different formats depending on export version
@@ -215,16 +214,15 @@ class PinterestPlugin(BasePlugin):
                 logger.error(f"Error processing Pinterest file {pin_file}: {e}")
         
         # 2. Process board files with location information
-        board_files = []
-        for pattern in ["**/boards*.json", "**/boards.json"]:
-            board_files.extend(glob.glob(os.path.join(data_dir, pattern), recursive=True))
-            
-        logger.info(f"Found {len(board_files)} Pinterest board files")
-        
+        board_patterns = ["**/boards*.json", "**/boards.json"]
+        board_files = list(self.iter_data_files(archive_root, board_patterns))
+
+        logger.info("Found %d Pinterest board files", len(board_files))
+
         # Process board files
         for board_file in board_files:
             try:
-                with open(board_file, 'r', encoding='utf-8') as f:
+                with board_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                     
                 # Different formats depending on export version
