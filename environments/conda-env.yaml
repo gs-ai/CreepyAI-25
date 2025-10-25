@@ -1,0 +1,10 @@
+name: creepyai
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - nodejs=20
+  - openssl
+  - pip:
+      - -r requirements.txt
