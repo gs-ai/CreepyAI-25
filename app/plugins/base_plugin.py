@@ -107,67 +107,38 @@ class BasePlugin:
 
     def get_data_directory(self) -> str:
         """Return the user-managed data directory for this plugin."""
-        # Priority order for resolving where to read plugin input data from:
-        # 1. If the environment variable CREEPYAI_CENTRAL_IMPORT_DIR is set and contains
-        #    plugin-specific files/subdirectory, use that (useful for a single drop folder).
-        # 2. If a repository-local data/imports directory exists (useful during development),
-        #    prefer plugin subfolder there.
-        # 3. Use configured data_directory (plugin config) or the per-plugin default in
-        #    the user's application data imports directory.
-
-        # 1) Check environment override for a central imports directory
-        central_env = os.environ.get("CREEPYAI_CENTRAL_IMPORT_DIR")
-        if central_env:
-            central_path = Path(central_env).expanduser()
-            try:
-                central_path.mkdir(parents=True, exist_ok=True)
-            except Exception:
-                pass
-
-            # Ensure a plugin-named subfolder exists to avoid confusion in UIs
-            candidate = central_path / self._default_input_dir.name
-            try:
-                candidate.mkdir(parents=True, exist_ok=True)
-                return str(candidate)
-            except Exception:
-                # Fall back to central root if subfolder cannot be created
-                return str(central_path)
-
-        # 2) Check for a repository-local development imports folder: <repo-root>/data/imports
+        # New logic: prefer a repository-local INPUT-DATA directory so users can
+        # drop datasets inside the project workspace. This avoids placing data
+        # deep inside the user's Application Support folders.
         try:
-            repo_imports = get_app_root() / "data" / "imports"
-            if repo_imports.exists():
-                candidate = repo_imports / self._default_input_dir.name
-                try:
-                    candidate.mkdir(parents=True, exist_ok=True)
-                    return str(candidate)
-                except Exception:
-                    # As a last resort, return repo_imports itself if it is non-empty
-                    try:
-                        if any(repo_imports.iterdir()):
-                            return str(repo_imports)
-                    except Exception:
-                        pass
+            repo_root = get_app_root()
+            repo_input = repo_root / "INPUT-DATA"
+            # Ensure the repo-local input root exists
+            repo_input.mkdir(parents=True, exist_ok=True)
+
+            # Prefer a plugin-named subdirectory inside INPUT-DATA (e.g. INPUT-DATA/www.yelp.com)
+            candidate = repo_input / self._default_input_dir.name
+            candidate.mkdir(parents=True, exist_ok=True)
+            return str(candidate)
         except Exception:
-            # If get_app_root() fails for any reason, fall back to configured/default path below
-            pass
+            # If anything goes wrong creating the repo-local input dir, fall back
+            # to the configured data_directory or the per-user default under imports
+            configured = self.config.get("data_directory")
+            if not configured:
+                configured = str(self._default_input_dir)
 
-        configured = self.config.get("data_directory")
-        if not configured:
-            configured = str(self._default_input_dir)
+            path = Path(str(configured)).expanduser()
+            if not path.is_absolute():
+                path = self._import_root / path
 
-        path = Path(str(configured)).expanduser()
-        if not path.is_absolute():
-            path = self._import_root / path
+            # If the path is intended to be a ZIP file ensure the parent exists, otherwise
+            # create the directory so the user has a predictable drop location.
+            if path.suffix.lower() == ".zip":
+                path.parent.mkdir(parents=True, exist_ok=True)
+                return str(path)
 
-        # If the path is intended to be a ZIP file ensure the parent exists, otherwise
-        # create the directory so the user has a predictable drop location.
-        if path.suffix.lower() == ".zip":
-            path.parent.mkdir(parents=True, exist_ok=True)
+            path.mkdir(parents=True, exist_ok=True)
             return str(path)
-
-        path.mkdir(parents=True, exist_ok=True)
-        return str(path)
 
     def prepare_data_directory(self, temp_folder: str) -> str:
         """Return a directory ready for processing, extracting ZIP archives if needed."""

@@ -39,11 +39,16 @@ account credentials.
 
 ### Prepare Offline Datasets
 
-1. Place exported archives for each plugin inside its managed ingest directory. CreepyAI-25 provisions the
-   folders automatically on first launch:
-   - **Linux**: `~/.local/share/CreepyAI/imports/<plugin_source>`
-   - **macOS**: `~/Library/Application Support/CreepyAI/imports/<plugin_source>`
-   - **Windows**: `%APPDATA%\CreepyAI\imports\<plugin_source>`
+1. Place exported archives for each plugin inside its managed ingest directory. By default the
+  application now prefers a repository-local drop folder for datasets so you can keep imports with
+  the project during development:
+  - **Repository (preferred)**: `./INPUT-DATA/<plugin_source>`
+
+  The legacy per-user application data locations are still supported if you prefer a global drop
+  location:
+  - **Linux**: `~/.local/share/CreepyAI/imports/<plugin_source>`
+  - **macOS**: `~/Library/Application Support/CreepyAI/imports/<plugin_source>`
+  - **Windows**: `%APPDATA%\CreepyAI\imports\<plugin_source>`
 
 2. (Optional) Refresh the curated social media datasets without credentials:
    ```bash
