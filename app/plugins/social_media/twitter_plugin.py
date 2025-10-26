@@ -1,6 +1,5 @@
 import glob
-from datetime import datetime
-from typing import List, Dict, Any, Optional
+import json
 import logging
 import os
 from datetime import datetime
@@ -12,6 +11,13 @@ from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 logger = logging.getLogger(__name__)
 
 class TwitterPlugin(ArchiveSocialMediaPlugin):
+    data_source_url = "https://twitter.com"
+    collection_terms = (
+        "Twitter headquarters",
+        "X Corp office",
+        "Twitter data center",
+    )
+
     def __init__(self) -> None:
         super().__init__(
             name="Twitter",
@@ -35,17 +41,27 @@ class TwitterPlugin(ArchiveSocialMediaPlugin):
     
     def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations = []
-        archive_location = self.config.get("archive_location", "")
+        collected = self.load_collected_locations(
+            target=target, date_from=date_from, date_to=date_to
+        )
+        if collected is not None:
+            return collected
 
-        if not (archive_location and os.path.exists(archive_location)):
-            if not self.has_input_data():
+        locations: List[LocationPoint] = []
+        configured_archive = self.config.get("archive_location", "")
+
+        archive_location: Optional[str] = None
+        if configured_archive:
+            candidate = os.path.expanduser(configured_archive)
+            if os.path.exists(candidate):
+                archive_location = candidate
+
+        if archive_location is None:
+            archive_root = self.resolve_archive_root()
+            if archive_root is None:
                 return locations
-            archive_location = self.prepare_data_directory("temp_twitter_extract")
+            archive_location = str(archive_root)
 
-        if not archive_location or not os.path.exists(archive_location):
-            return locations
-        
         # Look for tweet.js or tweets.json files
         tweet_files = []
         for pattern in ["**/tweet.js", "**/tweets.json", "**/tweet_*.js"]:

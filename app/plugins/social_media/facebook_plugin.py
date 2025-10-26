@@ -14,6 +14,13 @@ from app.plugins.enhanced_geocoding_helper import EnhancedGeocodingHelper
 logger = logging.getLogger(__name__)
 
 class FacebookPlugin(ArchiveSocialMediaPlugin):
+    data_source_url = "https://www.facebook.com"
+    collection_terms = (
+        "Facebook headquarters",
+        "Meta Platforms office",
+        "Facebook data center",
+    )
+
     def __init__(self) -> None:
         super().__init__(
             name="Facebook",
@@ -21,34 +28,23 @@ class FacebookPlugin(ArchiveSocialMediaPlugin):
             temp_subdir="temp_facebook_extract",
         )
         self.geocoder = EnhancedGeocodingHelper()
-        self.temp_dir = None
-    
-    def is_configured(self) -> Tuple[bool, str]:
-        """Check if the plugin is properly configured"""
-        if self.has_input_data():
-            return True, "FacebookPlugin is configured"
 
-        data_dir = self.get_data_directory()
-        return False, f"Add Facebook exports to {data_dir}"
-
-    def get_configuration_options(self) -> List[Dict[str, Any]]:
-        return []
-    
-    def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
+    def collect_locations(self, target: str, date_from: Optional[datetime] = None,
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations = []
-        if not self.has_input_data():
+        collected = self.load_collected_locations(
+            target=target, date_from=date_from, date_to=date_to
+        )
+        if collected is not None:
+            return collected
+
+        locations: List[LocationPoint] = []
+
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             return locations
 
-        data_dir = self.prepare_data_directory("temp_facebook_extract")
-
-        if not data_dir or not os.path.exists(data_dir):
-            return locations
-        
-        location_files = []
-        
-        for pattern in [
-            "**/location_history.json", 
+        location_patterns = [
+            "**/location_history.json",
             "**/your_location_history.json",
             "**/location_history*.json",
             "**/places_visited.json",
@@ -245,17 +241,12 @@ class FacebookPlugin(ArchiveSocialMediaPlugin):
     def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:
         targets = []
 
-        if not self.has_input_data():
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
             return targets
 
-        data_dir = self.prepare_data_directory("temp_facebook_extract")
-
-        if not data_dir or not os.path.exists(data_dir):
-            return targets
-        
-        location_files = []
-        for pattern in [
-            "**/location_history.json", 
+        location_patterns = [
+            "**/location_history.json",
             "**/your_location_history.json",
             "**/location_history*.json",
             "**/places_visited.json",

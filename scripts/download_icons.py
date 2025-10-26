@@ -189,15 +189,20 @@ def download_icon(
             backoff *= 2
 
 
-def convert_icon(input_path: Path) -> Path:
-    """Convert ``input_path`` to PNG format in-place.
+def convert_icon(input_path: Path, final_path: Optional[Path] = None) -> Path:
+    """Convert ``input_path`` to PNG format and enforce canonical naming."""
 
-    Returns the path of the PNG file.  If the conversion fails or Pillow is not
-    installed, ``input_path`` is returned unchanged.
-    """
+    target_path = final_path or input_path.with_suffix(".png")
 
     if input_path.suffix.lower() == ".png":
-        return input_path
+        if input_path == target_path:
+            return input_path
+        try:
+            input_path.replace(target_path)
+        except OSError as exc:
+            logger.error("Failed to rename %s to %s: %s", input_path, target_path, exc)
+            return input_path
+        return target_path
 
     try:
         from PIL import Image  # type: ignore
@@ -205,22 +210,21 @@ def convert_icon(input_path: Path) -> Path:
         logger.warning("Pillow not installed, skipping conversion for %s", input_path.name)
         return input_path
 
-    filename = input_path.with_suffix(".png")
     try:
         with Image.open(input_path) as image:
-            image.save(filename, "PNG")
+            image.save(target_path, "PNG")
     except Exception as exc:
         logger.error("Failed to convert %s to PNG: %s", input_path.name, exc)
         return input_path
 
-    if filename != input_path:
+    if input_path != target_path:
         try:
             input_path.unlink(missing_ok=True)
         except AttributeError:  # pragma: no cover - Python <3.8 fallback
             if input_path.exists():
                 input_path.unlink()
 
-    return filename
+    return target_path
 
 
 def resize_icon(input_path: Path, size: Tuple[int, int]) -> bool:
@@ -262,10 +266,13 @@ def download_all_icons(
 
     downloaded: List[Path] = []
     for source in build_icon_sources(manifest):
+        canonical_png = output_dir / source.filename("png")
         path = download_icon(session, source, output_dir, overwrite, timeout, retries)
         if not path:
             continue
-        target = convert_icon(path)
+        target = convert_icon(path, canonical_png)
+        if target != canonical_png and canonical_png.exists():
+            target = canonical_png
         if resize:
             resize_icon(target, size)
         path = target

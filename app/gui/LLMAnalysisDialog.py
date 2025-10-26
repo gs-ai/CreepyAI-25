@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import json
 import html
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPlainTextEdit,
     QTabWidget,
     QTextBrowser,
@@ -62,10 +67,17 @@ class LLMAnalysisDialog(QDialog):
         self.tabs.addTab(self.raw_view, "Raw JSON")
         layout.addWidget(self.tabs, 1)
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Close)
-        button_box.rejected.connect(self.reject)
-        button_box.accepted.connect(self.accept)
-        layout.addWidget(button_box)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Close)
+        self.export_button = self.button_box.addButton("Export JSON", QDialogButtonBox.ActionRole)
+        self.copy_button = self.button_box.addButton("Copy Summary", QDialogButtonBox.ActionRole)
+        self.open_dir_button = self.button_box.addButton("Open History Folder", QDialogButtonBox.ActionRole)
+
+        self.button_box.rejected.connect(self.reject)
+        self.button_box.accepted.connect(self.accept)
+        self.export_button.clicked.connect(self._export_current_entry)
+        self.copy_button.clicked.connect(self._copy_summary_to_clipboard)
+        self.open_dir_button.clicked.connect(self._open_history_directory)
+        layout.addWidget(self.button_box)
 
         self._entries: List[Dict[str, object]] = []
 
@@ -132,9 +144,12 @@ class LLMAnalysisDialog(QDialog):
             self.raw_view.clear()
             self.integrity_label.setText("No analysis runs available.")
 
+        self._update_action_states()
+
     def _on_selection_changed(self, index: int) -> None:
         if 0 <= index < len(self._entries):
             self._update_views(index)
+        self._update_action_states()
 
     def _update_views(self, index: int) -> None:
         entry = self._entries[index]
@@ -150,6 +165,97 @@ class LLMAnalysisDialog(QDialog):
         self.summary_view.setHtml(self._build_summary_html(payload))
         self.raw_view.setPlainText(json.dumps(payload, indent=2))
         self.tabs.setCurrentIndex(0)
+
+    def _current_entry(self) -> Optional[Dict[str, object]]:
+        index = self.history_selector.currentIndex()
+        if 0 <= index < len(self._entries):
+            return self._entries[index]
+        return None
+
+    def _update_action_states(self) -> None:
+        entry = self._current_entry()
+        has_entry = entry is not None
+        for button in (self.export_button, self.copy_button):
+            button.setEnabled(has_entry)
+
+        if not has_entry:
+            self.open_dir_button.setEnabled(False)
+            return
+
+        path_str = str(entry.get("path") or "")
+        if not path_str:
+            self.open_dir_button.setEnabled(False)
+            return
+
+        history_dir = Path(path_str).expanduser().resolve().parent
+        self.open_dir_button.setEnabled(history_dir.exists())
+
+    def _export_current_entry(self) -> None:
+        entry = self._current_entry()
+        if not entry:
+            return
+
+        default_path = entry.get("path") or "analysis.json"
+        if isinstance(default_path, str) and default_path:
+            default_path = Path(default_path)
+            suggested = default_path.with_suffix(".json")
+        else:
+            suggested = Path.home() / "analysis.json"
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Analysis JSON",
+            str(suggested),
+            "JSON Files (*.json)",
+        )
+        if not file_path:
+            return
+
+        try:
+            Path(file_path).write_text(json.dumps(entry["payload"], indent=2), encoding="utf-8")
+        except OSError as exc:
+            QMessageBox.critical(self, "Export Error", f"Failed to write analysis file: {exc}")
+            return
+
+        QMessageBox.information(self, "Analysis Exported", f"Analysis saved to {file_path}")
+
+    def _copy_summary_to_clipboard(self) -> None:
+        entry = self._current_entry()
+        if not entry:
+            return
+
+        summary = self.summary_view.toPlainText().strip()
+        if not summary:
+            summary = json.dumps(entry["payload"], indent=2)
+
+        QApplication.clipboard().setText(summary)
+        QMessageBox.information(self, "Copied", "Analysis summary copied to the clipboard.")
+
+    def _open_history_directory(self) -> None:
+        entry = self._current_entry()
+        if not entry:
+            return
+
+        path_str = entry.get("path")
+        if not path_str:
+            QMessageBox.information(
+                self,
+                "No Saved File",
+                "This analysis has not been saved yet. Run another analysis to persist it to disk.",
+            )
+            return
+
+        history_path = Path(str(path_str)).expanduser()
+        target_dir = history_path.parent if history_path.is_file() else history_path
+        if not target_dir.exists():
+            QMessageBox.warning(
+                self,
+                "Missing History",
+                f"The history directory {target_dir} is no longer available.",
+            )
+            return
+
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(target_dir)))
 
     def _build_summary_html(self, payload: Dict[str, object]) -> str:
         subject = html.escape(str(payload.get("subject") or "Unknown"))

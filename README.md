@@ -1,16 +1,23 @@
+# CreepyAI-25 – OSINT Intelligence Platform
 
-# CreepyAI-25
+CreepyAI-25 is an open-source geolocation intelligence assistant that ingests, normalises, and correlates
+offline-first datasets to help investigators surface actionable insights without relying on API keys or
+account credentials.
 
-CreepyAI-25 is an open-source OSINT (Open Source Intelligence) assistant designed to help researchers, analysts, and cybersecurity professionals gather and analyze public information effectively.
+## Feature Highlights
 
-## Features
-
-- **Multi-platform Search**: Query multiple sources simultaneously
-- **Credential-free Operation**: Work entirely with offline data exports and open data sources—no API keys or logins required
-- **Data Visualization**: Visualize relationships between data points
-- **Project Management**: Save and organize your research
-- **Plugin System**: Extend functionality with custom plugins
-- **Reporting**: Generate comprehensive reports
+- **Managed ingest directories** – every plugin exposes a dedicated drop folder so you can preload exports
+  and archives without browsing for paths at run time.
+- **Automated social media collectors** – refresh OSINT datasets for supported platforms with a single
+  command that dedupes records and preserves the latest evidence inside each plugin directory.
+- **Local LLM analysis** – run privacy-preserving intelligence synthesis against collected data using locally
+  installed Ollama models tuned for Apple Silicon laptops.
+- **Credential-free operation** – work exclusively with offline exports and open datasets while keeping audit
+  logs and chain-of-custody metadata intact.
+- **Modular plugin ecosystem** – expand coverage with dedicated parsers, normalisers, and correlation
+  engines for social media, email, location history, and OSINT archives.
+- **Rich visualisation** – map locations, explore relationships, and generate reports directly from the
+  CreepyAI-25 desktop interface.
 
 ## Quick Start
 
@@ -36,34 +43,7 @@ CreepyAI-25 is an open-source OSINT (Open Source Intelligence) assistant designe
    - **macOS**: `~/Library/Application Support/CreepyAI/imports/<plugin_source>`
    - **Windows**: `%APPDATA%\CreepyAI\imports\<plugin_source>`
 
-CreepyAI supports plugins to extend its functionality. Plugins are stored in `~/.config/creepyai/plugins/` by default.
-
-### Offline Data Imports
-
-Each plugin now watches a dedicated ingest directory so you no longer need to browse for exports manually. Drop your ZIP archives or extracted folders into the matching subdirectory and enable the plugin's checkbox.
-
-- **Linux**: `~/.local/share/creepyai/imports/<plugin_slug>`
-- **macOS**: `~/Library/Application Support/CreepyAI/imports/<plugin_slug>`
-- **Windows**: `%APPDATA%\CreepyAI\imports\<plugin_slug>`
-
-The slug corresponds to the plugin name in lowercase with spaces replaced by underscores (for example, `Instagram` → `instagram`, `Email Analysis` → `email_analysis`). The configuration dialog displays the resolved path for each plugin as a reminder.
-
-### Creating Plugins
-
-To create a plugin:
-
-1. Create a new Python file in the plugins directory
-2. Inherit from the `BasePlugin` class
-3. Implement the required methods
-4. See `plugin_base.py` for more details
-
-## Troubleshooting
-
-### PyQt5 Issues
-
-If you encounter Qt/PyQt5 errors:
-
-1. **Run the diagnostic tool**:
+2. (Optional) Refresh the curated social media datasets without credentials:
    ```bash
    python scripts/collect_social_media_data.py
    ```

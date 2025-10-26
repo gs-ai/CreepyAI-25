@@ -4,12 +4,20 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-from app.plugins.base_plugin import BasePlugin, LocationPoint
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.plugins.base_plugin import LocationPoint
 from app.plugins.geocoding_helper import GeocodingHelper
 from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 
 class YelpPlugin(ArchiveSocialMediaPlugin):
+    data_source_url = "https://www.yelp.com"
+    collection_terms = (
+        "Yelp headquarters",
+        "Yelp office",
+        "Yelp campus",
+    )
+
     def __init__(self) -> None:
         super().__init__(
             name="Yelp",
@@ -33,41 +41,26 @@ class YelpPlugin(ArchiveSocialMediaPlugin):
             }
         ]
     
-    def collect_locations(self, target: str, date_from: Optional[datetime] = None, 
-                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
-        locations = []
-        data_dir = self.prepare_data_directory("temp_yelp_extract")
+    def collect_locations(
+        self,
+        target: str,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+    ) -> List[LocationPoint]:
+        collected = self.load_collected_locations(
+            target=target, date_from=date_from, date_to=date_to
+        )
+        if collected is not None:
+            return collected
+
+        locations: List[LocationPoint] = []
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
+            return locations
+
+        data_dir = str(archive_root)
         attempt_geocoding = self.config.get("attempt_geocoding", True)
 
-        if not data_dir or not os.path.exists(data_dir):
-            return locations
-            
-        # Handle ZIP archives
-        if data_dir.endswith('.zip') and zipfile.is_zipfile(data_dir):
-            with zipfile.ZipFile(data_dir, 'r') as zip_ref:
-                temp_dir = os.path.join(self.data_dir, "temp_yelp_extract")
-                os.makedirs(temp_dir, exist_ok=True)
-                zip_ref.extractall(temp_dir)
-                data_dir = temp_dir
-
-        # Special handling: Yelp Academic Dataset (NDJSON files per entity)
-        # Common filenames: yelp_academic_dataset_business.json, _review.json, _tip.json, _user.json, _checkin.json
-        try:
-            acad_business = None
-            # Look for academic dataset business file
-            for pattern in [
-                "**/yelp_academic_dataset_business.json",
-                "**/business.json",
-            ]:
-                matches = glob.glob(os.path.join(data_dir, pattern), recursive=True)
-                if matches:
-                    acad_business = matches[0]
-                    break
-            if acad_business:
-                locations.extend(self._process_academic_business(acad_business, target, date_from, date_to))
-        except Exception as e:
-            print(f"Error processing Yelp academic dataset: {e}")
-                
         # Process JSON files (Yelp user data exports)
         json_locations = self._process_json_files(
             data_dir, target, attempt_geocoding, date_from, date_to
@@ -87,169 +80,6 @@ class YelpPlugin(ArchiveSocialMediaPlugin):
         locations.extend(html_locations)
 
         return locations
-
-    def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:
-        """Return candidate Yelp businesses matching the search term.
-
-        This scans the Yelp Academic Dataset business file (NDJSON) under the
-        configured data directory and returns up to a reasonable number of
-        candidates. Each candidate contains:
-          - targetId: the Yelp business_id when available, otherwise a name slug
-          - targetName: business name
-          - pluginName: "Yelp"
-        """
-        results: List[Dict[str, Any]] = []
-        try:
-            data_dir = self.config.get("data_directory", "")
-            if not search_term or not data_dir or not os.path.exists(data_dir):
-                return results
-
-            # Locate the academic business NDJSON file
-            acad_business = None
-            for pattern in [
-                "**/yelp_academic_dataset_business.json",
-                "**/business.json",
-            ]:
-                matches = glob.glob(os.path.join(data_dir, pattern), recursive=True)
-                if matches:
-                    acad_business = matches[0]
-                    break
-
-            if not acad_business or not os.path.exists(acad_business):
-                return results
-
-            term_lower = search_term.lower()
-            seen_ids = set()
-            seen_names = set()
-            max_results = 200  # cap to keep UI responsive
-
-            with open(acad_business, 'r', encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    if len(results) >= max_results:
-                        break
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        obj = json.loads(line)
-                    except Exception:
-                        # If the file is not strict NDJSON and contains arrays/objects
-                        try:
-                            obj = json.loads(line) if line.startswith('{') else None
-                        except Exception:
-                            obj = None
-                    if not isinstance(obj, dict):
-                        continue
-
-                    name = obj.get('name') or obj.get('business_name')
-                    if not name or term_lower not in name.lower():
-                        continue
-
-                    business_id = obj.get('business_id') or obj.get('id')
-                    target_id = None
-                    if business_id:
-                        if business_id in seen_ids:
-                            continue
-                        seen_ids.add(business_id)
-                        target_id = str(business_id)
-                    else:
-                        # Fallback to name-based de-duplication
-                        key = name.strip().lower()
-                        if key in seen_names:
-                            continue
-                        seen_names.add(key)
-                        target_id = key
-
-                    results.append({
-                        'targetId': target_id,
-                        'targetName': name,
-                        'pluginName': self.name,
-                    })
-        except Exception:
-            # Best-effort; don't propagate UI errors from dataset scanning
-            pass
-        return results
-
-    def _process_academic_business(self, business_path: str, target: str,
-                                   date_from: Optional[datetime],
-                                   date_to: Optional[datetime]) -> List[LocationPoint]:
-        """Parse Yelp Academic Dataset business file (NDJSON) and return locations.
-
-        Notes:
-        - Each line is a JSON object representing a business.
-        - Coordinates are top-level fields: latitude, longitude.
-        - Address components include: address, city, state, postal_code.
-        - We filter by target (case-insensitive substring) against business name if provided.
-        - Reviews/timestamps are in separate files; we set timestamp to now if none.
-        """
-        results: List[LocationPoint] = []
-        try:
-            with open(business_path, 'r', encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        obj = json.loads(line)
-                    except Exception:
-                        # Some distributions use a JSON array; fallback
-                        try:
-                            data = json.loads(line)
-                            if isinstance(data, dict):
-                                obj = data
-                            else:
-                                continue
-                        except Exception:
-                            continue
-
-                    # Required fields
-                    name = obj.get('name') or obj.get('business_name')
-                    lat = obj.get('latitude')
-                    lon = obj.get('longitude')
-                    if lat is None or lon is None:
-                        continue
-
-                    if target and target.strip():
-                        if not name or target.lower() not in name.lower():
-                            continue
-
-                    # Compose address context
-                    parts = []
-                    for key in ['address', 'address1', 'address2', 'address3']:
-                        val = obj.get(key)
-                        if val:
-                            parts.append(val)
-                    city = obj.get('city')
-                    state = obj.get('state')
-                    postal = obj.get('postal_code')
-                    if city: parts.append(city)
-                    if state: parts.append(state)
-                    if postal: parts.append(str(postal))
-                    address = ", ".join([p for p in parts if p]) if parts else None
-
-                    context = name or "Yelp Business"
-                    if address:
-                        context += f" at {address}"
-
-                    # Timestamp: dataset doesn't include per-business timestamps; use now
-                    ts = datetime.now()
-
-                    try:
-                        results.append(
-                            LocationPoint(
-                                latitude=float(lat),
-                                longitude=float(lon),
-                                timestamp=ts,
-                                source="Yelp Academic",
-                                context=context,
-                            )
-                        )
-                    except Exception:
-                        continue
-        except Exception as e:
-            print(f"Error reading academic business file: {e}")
-
-        return results
     
     def _process_json_files(self, data_dir: str, target: str, attempt_geocoding: bool, 
                            date_from: Optional[datetime], date_to: Optional[datetime]) -> List[LocationPoint]:

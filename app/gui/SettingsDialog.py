@@ -158,6 +158,25 @@ class SettingsDialog(QDialog):
 
         overrides_group.setLayout(overrides_layout)
         analysis_layout.addWidget(overrides_group)
+
+        automation_group = QGroupBox("Automation")
+        automation_form = QFormLayout()
+
+        self.auto_refresh_checkbox = QCheckBox("Enable background dataset refresh")
+        self.auto_refresh_checkbox.stateChanged.connect(self._update_auto_refresh_state)
+        automation_form.addRow("", self.auto_refresh_checkbox)
+
+        self.auto_refresh_interval = QSpinBox()
+        self.auto_refresh_interval.setRange(1, 720)
+        self.auto_refresh_interval.setValue(30)
+        automation_form.addRow("Refresh interval (minutes):", self.auto_refresh_interval)
+
+        self.auto_analysis_checkbox = QCheckBox("Re-run analysis after refresh when a project is open")
+        automation_form.addRow("", self.auto_analysis_checkbox)
+
+        automation_group.setLayout(automation_form)
+        analysis_layout.addWidget(automation_group)
+
         analysis_layout.addStretch(1)
         self.analysis_tab.setLayout(analysis_layout)
 
@@ -175,6 +194,8 @@ class SettingsDialog(QDialog):
         layout.addWidget(button_box)
 
         self.setLayout(layout)
+
+        self._update_auto_refresh_state()
 
     def _add_model_override_row(
         self,
@@ -206,6 +227,15 @@ class SettingsDialog(QDialog):
         current_row = self.model_table.currentRow()
         if current_row >= 0:
             self.model_table.removeRow(current_row)
+
+    def _update_auto_refresh_state(self) -> None:
+        enabled = getattr(self, "auto_refresh_checkbox", None)
+        if enabled is None:
+            return
+
+        is_enabled = self.auto_refresh_checkbox.isChecked()
+        self.auto_refresh_interval.setEnabled(is_enabled)
+        self.auto_analysis_checkbox.setEnabled(is_enabled)
 
     def _load_model_overrides(self, overrides: List[Dict[str, object]]) -> None:
         self.model_table.setRowCount(0)
@@ -273,6 +303,9 @@ class SettingsDialog(QDialog):
             self.analysis_tone.setText("objective")
             self.analysis_depth.setText("balanced")
             self.prompt_template_edit.setPlainText(DEFAULT_PROMPT_TEMPLATE)
+            self.auto_refresh_checkbox.setChecked(False)
+            self.auto_refresh_interval.setValue(30)
+            self.auto_analysis_checkbox.setChecked(False)
             overrides: List[Dict[str, object]] = []
 
             # Load from config manager
@@ -310,11 +343,23 @@ class SettingsDialog(QDialog):
                 if isinstance(overrides_config, list):
                     overrides = overrides_config
 
+                auto_refresh_enabled = bool(self.config_manager.get('analysis.auto_refresh_enabled', False))
+                interval_value = self.config_manager.get('analysis.auto_refresh_interval_minutes', 30)
+                auto_run_enabled = bool(self.config_manager.get('analysis.auto_run_after_refresh', False))
+
+                self.auto_refresh_checkbox.setChecked(auto_refresh_enabled)
+                try:
+                    self.auto_refresh_interval.setValue(max(1, int(interval_value)))
+                except (TypeError, ValueError):
+                    self.auto_refresh_interval.setValue(30)
+                self.auto_analysis_checkbox.setChecked(auto_run_enabled)
+
         except Exception as e:
             logger.error(f"Error loading settings: {str(e)}")
             QMessageBox.warning(self, "Settings Error", f"Failed to load settings: {str(e)}")
             overrides = []
         self._load_model_overrides(overrides or [])
+        self._update_auto_refresh_state()
 
     def _save_settings(self):
         """Save settings and close dialog."""
@@ -336,6 +381,9 @@ class SettingsDialog(QDialog):
                 self.config_manager.set('analysis.default_depth', self.analysis_depth.text().strip() or "balanced")
                 self.config_manager.set('analysis.prompt_template', template_text)
                 self.config_manager.set('analysis.model_overrides', self._collect_model_overrides())
+                self.config_manager.set('analysis.auto_refresh_enabled', self.auto_refresh_checkbox.isChecked())
+                self.config_manager.set('analysis.auto_refresh_interval_minutes', int(self.auto_refresh_interval.value()))
+                self.config_manager.set('analysis.auto_run_after_refresh', self.auto_analysis_checkbox.isChecked())
 
                 # Save config to disk
                 self.config_manager.save()

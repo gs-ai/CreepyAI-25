@@ -7,4 +7,4 @@ dependencies:
   - nodejs=20
   - openssl
   - pip:
-    - -r ../requirements.txt
+      - -r requirements.txt

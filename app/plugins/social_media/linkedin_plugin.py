@@ -21,7 +21,14 @@ logger = logging.getLogger(__name__)
 
 class LinkedInPlugin(ArchiveSocialMediaPlugin):
     """Plugin for extracting location data from LinkedIn data"""
-    
+
+    data_source_url = "https://www.linkedin.com"
+    collection_terms = (
+        "LinkedIn headquarters",
+        "LinkedIn office",
+        "LinkedIn regional office",
+    )
+
     def __init__(self) -> None:
         super().__init__(
             name="LinkedIn",
@@ -61,14 +68,6 @@ class LinkedInPlugin(ArchiveSocialMediaPlugin):
             }
         ]
     
-    def is_configured(self) -> Tuple[bool, str]:
-        """Check if the plugin is properly configured"""
-        if self.has_input_data():
-            return True, "LinkedIn plugin is configured"
-
-        data_dir = self.get_data_directory()
-        return False, f"Add LinkedIn exports to {data_dir}"
-    
     def collect_locations(self, target: str, date_from: Optional[datetime] = None,
                          date_to: Optional[datetime] = None) -> List[LocationPoint]:
         """
@@ -82,15 +81,26 @@ class LinkedInPlugin(ArchiveSocialMediaPlugin):
         Returns:
             List of LocationPoint objects
         """
-        locations = []
-        
-        # Check if target is a directory path or use configured directory
-        data_dir = target
-        if not data_dir or not os.path.exists(data_dir) or not os.path.isdir(data_dir):
-            if not self.has_input_data():
-                logger.warning("LinkedIn data directory has no content")
-                return []
-            data_dir = self.get_data_directory()
+        collected = self.load_collected_locations(
+            target=target, date_from=date_from, date_to=date_to
+        )
+        if collected is not None:
+            return collected
+
+        locations: List[LocationPoint] = []
+
+        data_root: Optional[Path] = None
+        if target:
+            candidate = Path(target).expanduser()
+            if candidate.exists():
+                data_root = candidate
+
+        if data_root is None:
+            data_root = self.resolve_archive_root()
+
+        if data_root is None:
+            logger.warning("LinkedIn data directory not found")
+            return locations
 
         # Process profile data
         locations.extend(self._process_profile(data_root))

@@ -12,6 +12,13 @@ from app.plugins.social_media.base import ArchiveSocialMediaPlugin
 logger = logging.getLogger(__name__)
 
 class SnapchatPlugin(ArchiveSocialMediaPlugin):
+    data_source_url = "https://www.snapchat.com"
+    collection_terms = (
+        "Snapchat headquarters",
+        "Snap Inc office",
+        "Snapchat campus",
+    )
+
     def __init__(self) -> None:
         super().__init__(
             name="Snapchat",
@@ -23,11 +30,13 @@ class SnapchatPlugin(ArchiveSocialMediaPlugin):
     def is_configured(self) -> Tuple[bool, str]:
         """Check if the plugin is properly configured"""
         if self.has_input_data():
-            return True, "SnapchatPlugin is configured"
+            return True, "Snapchat plugin is configured"
 
         memories_json = self.config.get("memories_json", "")
-        if memories_json and os.path.exists(memories_json):
-            return True, "SnapchatPlugin is configured"
+        if memories_json:
+            candidate = Path(memories_json).expanduser()
+            if candidate.exists():
+                return True, "Snapchat plugin is configured"
 
         data_dir = self.get_data_directory()
         return False, f"Add Snapchat exports to {data_dir}"
@@ -65,18 +74,26 @@ class SnapchatPlugin(ArchiveSocialMediaPlugin):
         Returns:
             List of LocationPoint objects
         """
-        locations = []
-        data_dir = self.prepare_data_directory("temp_snapchat_extract")
+        collected = self.load_collected_locations(
+            target=target, date_from=date_from, date_to=date_to
+        )
+        if collected is not None:
+            return collected
+
+        locations: List[LocationPoint] = []
+        archive_root = self.resolve_archive_root()
         memories_json = self.config.get("memories_json", "")
         process_memories = self.config.get("process_memories", True)
         process_stories = self.config.get("process_stories", True)
 
-        if not self.has_input_data() and (not memories_json or not os.path.exists(memories_json)):
-            logger.warning("No valid data directory or memories file found")
-            return locations
+        configured_memories: Optional[Path] = None
+        if memories_json:
+            candidate = Path(memories_json).expanduser()
+            if candidate.exists():
+                configured_memories = candidate
 
-        if data_dir and not os.path.exists(data_dir):
-            logger.warning("Snapchat data directory not found after preparation")
+        if archive_root is None and configured_memories is None:
+            logger.warning("No valid Snapchat archive directory or memories file found")
             return locations
 
         # Process Snapchat Memories
