@@ -52,14 +52,10 @@ DEFAULT_CONFIG = {
     'geo': {
         'default_map_center': [51.505, -0.09],  # London
         'default_zoom': 13,
-        'map_provider': 'osm',  # Options: 'osm', 'google', 'carto'
+        'map_provider': 'osm',
         'gps_format': 'decimal',  # Options: 'decimal', 'dms'
         'distance_units': 'km',  # Options: 'km', 'mi'
         'geolocation_services': {
-            'opencage': {
-                'enabled': False,
-                'api_key': '',
-            },
             'nominatim': {
                 'enabled': True,
                 'user_agent': 'CreepyAI/2.5.0',
@@ -70,6 +66,24 @@ DEFAULT_CONFIG = {
             'cluster_threshold_meters': 25,
             'cluster_min_time_minutes': 10,
         }
+    },
+    'analysis': {
+        'default_temperature': 0.2,
+        'default_tone': 'objective',
+        'default_depth': 'balanced',
+        'prompt_template': (
+            "You are an investigative assistant for CreepyAI-25. Analyse the provided "
+            "geospatial activity for {subject} with an {tone} tone and a {depth} level "
+            "of detail. Prioritise the focus, if supplied: {focus}. Use the summary "
+            "insights and record excerpts to build actionable findings that directly "
+            "support locating the subject.\n\nSummary context:\n{summary}\n\n"
+            "Records excerpt:\n{records}\n\nReturn a JSON object with keys 'key_connections', "
+            "'priority_locations', and 'next_steps'. Each key should map to a list of "
+            "objects describing actionable insights with confidence or rationale fields."
+        ),
+        'model_overrides': [],
+        'max_records': 75,
+        'history_dir': '',
     },
     'security': {
         'anonymize_exports': False,

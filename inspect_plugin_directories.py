@@ -1,38 +1,47 @@
 #!/usr/bin/env python3
-"""
-Script to inspect plugin-related directories and report their contents
-"""
-import os
-import sys
-import json
-import yaml
-import logging
-from typing import Dict, List, Any, Optional
+"""Script to inspect plugin-related directories and report their contents.
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+Enhancements over the previous version:
+
+* Supports custom project roots via ``--base-dir``.
+* Can emit a JSON summary (``--json``) for automation while still printing a
+  readable human report.
+* Adds structured error handling and exit codes.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional
+
+import yaml
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 class PluginDirectoryInspector:
     """Inspects plugin-related directories and reports their contents"""
     
-    def __init__(self, base_dir: str):
+    def __init__(self, base_dir: Path):
         """Initialize with the project base directory"""
         self.base_dir = base_dir
         self.plugin_dirs = {
-            'configs': os.path.join(base_dir, 'configs', 'plugins'),
-            'templates': os.path.join(base_dir, 'resources', 'templates', 'plugins'),
-            'plugins': os.path.join(base_dir, 'app', 'plugins')
+            'configs': base_dir / 'configs' / 'plugins',
+            'templates': base_dir / 'resources' / 'templates' / 'plugins',
+            'plugins': base_dir / 'app' / 'plugins',
         }
         
-    def check_directory(self, dir_path: str) -> Dict[str, Any]:
+    def check_directory(self, dir_path: Path) -> Dict[str, Any]:
         """Check a directory and return information about its contents"""
         result = {
-            'exists': os.path.exists(dir_path),
-            'is_dir': os.path.isdir(dir_path) if os.path.exists(dir_path) else False,
+            'exists': dir_path.exists(),
+            'is_dir': dir_path.is_dir(),
             'files': [],
             'subdirs': [],
             'py_files': 0,
@@ -43,30 +52,30 @@ class PluginDirectoryInspector:
         
         if not result['exists'] or not result['is_dir']:
             return result
-            
-        for item in os.listdir(dir_path):
-            item_path = os.path.join(dir_path, item)
-            
-            if os.path.isdir(item_path):
+
+        for item in dir_path.iterdir():
+            item_path = item
+
+            if item_path.is_dir():
                 result['subdirs'].append({
-                    'name': item,
-                    'path': item_path,
-                    'item_count': len(os.listdir(item_path))
+                    'name': item_path.name,
+                    'path': str(item_path),
+                    'item_count': sum(1 for _ in item_path.iterdir()),
                 })
             else:
                 file_info = {
-                    'name': item,
-                    'size': os.path.getsize(item_path),
-                    'type': self._get_file_type(item)
+                    'name': item_path.name,
+                    'size': item_path.stat().st_size,
+                    'type': self._get_file_type(item_path.name),
                 }
                 result['files'].append(file_info)
-                
+
                 # Count file types
-                if item.endswith('.py'):
+                if item_path.name.endswith('.py'):
                     result['py_files'] += 1
-                elif item.endswith('.json'):
+                elif item_path.name.endswith('.json'):
                     result['json_files'] += 1
-                elif item.endswith(('.yaml', '.yml')):
+                elif item_path.name.endswith(('.yaml', '.yml')):
                     result['yaml_files'] += 1
                 else:
                     result['other_files'] += 1
@@ -93,18 +102,18 @@ class PluginDirectoryInspector:
     def check_all_directories(self) -> Dict[str, Dict[str, Any]]:
         """Check all plugin-related directories"""
         results = {}
-        
+
         for name, dir_path in self.plugin_dirs.items():
             results[name] = self.check_directory(dir_path)
-            
+
         return results
         
-    def get_yaml_config_summary(self, filename: str) -> Optional[Dict[str, Any]]:
+    def get_yaml_config_summary(self, filename: Path) -> Optional[Dict[str, Any]]:
         """Get a summary of a YAML config file"""
         try:
-            with open(filename, 'r') as f:
+            with filename.open('r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)
-                
+
             summary = {
                 'keys': list(data.keys()) if isinstance(data, dict) else [],
                 'structure': self._summarize_structure(data)
@@ -114,10 +123,10 @@ class PluginDirectoryInspector:
             logger.error(f"Error reading YAML file {filename}: {e}")
             return None
             
-    def get_json_config_summary(self, filename: str) -> Optional[Dict[str, Any]]:
+    def get_json_config_summary(self, filename: Path) -> Optional[Dict[str, Any]]:
         """Get a summary of a JSON config file"""
         try:
-            with open(filename, 'r') as f:
+            with filename.open('r', encoding='utf-8') as f:
                 data = json.load(f)
                 
             summary = {
@@ -191,12 +200,12 @@ class PluginDirectoryInspector:
                 print("\nConfig File Summaries:")
                 for file in result['files']:
                     if file['name'].endswith('.json'):
-                        file_path = os.path.join(full_path, file['name'])
+                        file_path = full_path / file['name']
                         summary = self.get_json_config_summary(file_path)
                         if summary:
                             print(f"  {file['name']} keys: {', '.join(summary['keys'])}")
                     elif file['name'].endswith(('.yaml', '.yml')):
-                        file_path = os.path.join(full_path, file['name'])
+                        file_path = full_path / file['name']
                         summary = self.get_yaml_config_summary(file_path)
                         if summary:
                             print(f"  {file['name']} keys: {', '.join(summary['keys'])}")
@@ -206,9 +215,9 @@ class PluginDirectoryInspector:
                 print("\nTemplate File Information:")
                 for file in result['files']:
                     if file['name'].endswith('.py'):
-                        file_path = os.path.join(full_path, file['name'])
+                        file_path = full_path / file['name']
                         try:
-                            with open(file_path, 'r') as f:
+                            with file_path.open('r', encoding='utf-8') as f:
                                 lines = f.readlines()
                                 print(f"  {file['name']}: {len(lines)} lines")
                                 # Try to extract template name/purpose
@@ -226,11 +235,11 @@ class PluginDirectoryInspector:
                 plugin_categories = {}
                 for subdir in result['subdirs']:
                     plugin_categories[subdir['name']] = []
-                    subdir_path = os.path.join(full_path, subdir['name'])
-                    if os.path.exists(subdir_path) and os.path.isdir(subdir_path):
-                        for item in os.listdir(subdir_path):
-                            if item.endswith('.py') and not item.startswith('__'):
-                                plugin_categories[subdir['name']].append(item)
+                    subdir_path = full_path / subdir['name']
+                    if subdir_path.exists() and subdir_path.is_dir():
+                        for item in subdir_path.iterdir():
+                            if item.suffix == '.py' and not item.name.startswith('__'):
+                                plugin_categories[subdir['name']].append(item.name)
                                 
                 print("\nPlugin Categories:")
                 for category, plugins in plugin_categories.items():
@@ -241,13 +250,40 @@ class PluginDirectoryInspector:
         
         print("\n=== END OF REPORT ===\n")
 
-def main():
-    """Main function"""
-    # Use the script directory as base, assuming script is in project root
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    inspector = PluginDirectoryInspector(base_dir)
-    inspector.print_directory_report()
+def dump_json_report(report: Dict[str, Dict[str, Any]], output: Optional[Path]) -> None:
+    payload = json.dumps(report, indent=2, sort_keys=True)
+    if output:
+        output.write_text(payload, encoding='utf-8')
+        logger.info("Wrote JSON report to %s", output)
+    else:
+        print(payload)
 
-if __name__ == "__main__":
-    main()
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Inspect CreepyAI plugin directories")
+    parser.add_argument("--base-dir", type=Path, default=Path(__file__).resolve().parent, help="Project root directory")
+    parser.add_argument("--json", type=Path, nargs="?", const=Path("-"), help="Emit JSON report to stdout or file")
+    parser.add_argument("--summary-only", action="store_true", help="Skip the verbose console report")
+    return parser
+
+
+def main(argv: Iterable[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    base_dir = args.base_dir.resolve()
+    inspector = PluginDirectoryInspector(base_dir)
+    report = inspector.check_all_directories()
+
+    if args.json is not None:
+        output = None if args.json == Path("-") else args.json.resolve()
+        dump_json_report(report, output)
+
+    if not args.summary_only:
+        inspector.print_directory_report()
+
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover - CLI entry point
+    sys.exit(main())

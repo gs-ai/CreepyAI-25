@@ -2,22 +2,37 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import functools
+import queue
+import threading
 from app.resources.icons import Icons
 import creepy.creepy_resources_rc as creepy_resources_rc
 import os
 import logging
 import datetime
 import time
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 from PyQt5.QtWidgets import (
-    QMainWindow, QApplication, QMessageBox, QFileDialog, 
+    QMainWindow, QApplication, QMessageBox, QFileDialog,
     QProgressDialog, QMenu, QAction, QLabel, QStatusBar,
     QToolBar, QDialog, QVBoxLayout, QHBoxLayout
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QSettings
-from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QSettings, QTimer
+from PyQt5.QtGui import QIcon
 
 # Import internal modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from app.analysis import (
+    DEFAULT_PROMPT_TEMPLATE,
+    LocalLLMAnalyzer,
+    SUPPORTED_LOCAL_LLM_MODELS,
+    get_default_history_dir,
+    load_recent_history,
+    load_social_media_records,
+    persist_analysis_result,
+)
+from app.core.config_manager import ConfigManager
+from app.gui.LLMAnalysisDialog import LLMAnalysisDialog
 from app.models.Database import Database
 from app.models.Location import Location
 from app.models.Project import Project
@@ -25,6 +40,7 @@ from utilities.PluginManager import PluginManager
 from utilities.WebScrapingUtility import WebScrapingUtility
 from utilities.GeocodingUtility import GeocodingUtility
 from utilities.ExportUtils import ExportManager
+from utilities.webengine_compat import setup_webengine_options
 
 # Import UI components
 from ui.PersonProjectWizard import PersonProjectWizard
@@ -37,42 +53,64 @@ from ui.creepy_map_view import CreepyMapView
 
 logger = logging.getLogger(__name__)
 
+_ICON_STYLESHEET: Optional[str] = None
+
+
+def _load_icon_stylesheet() -> Optional[str]:
+    """Load the shared icon stylesheet once and cache it for reuse."""
+
+    global _ICON_STYLESHEET
+
+    if _ICON_STYLESHEET is not None:
+        return _ICON_STYLESHEET
+
+    style_path = Path(__file__).resolve().parents[2] / "resources" / "styles" / "icons.css"
+    try:
+        _ICON_STYLESHEET = style_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        logger.debug("Icon stylesheet not found at %s", style_path)
+        _ICON_STYLESHEET = None
+    except Exception:
+        logger.exception("Failed to load icon stylesheet from %s", style_path)
+        _ICON_STYLESHEET = None
+
+    return _ICON_STYLESHEET
+
 class CreepyMainWindow(QMainWindow):
     """Main window for the CreepyAI application."""
-    
-    def __init__(self, config_manager, parent=None):
-        # Fix: Call the parent class constructor first
-        super(CreepyMainWindow, self).__init__(parent)
-        
-        # Load icon styles
-        try:
-            style_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                    "resources", "styles", "icons.css")
-            if os.path.exists(style_path):
-                with open(style_path, 'r') as css_file:
-                    self.setStyleSheet(css_file.read())
-        except Exception as e:
-            print(f"Failed to load icon styles: {e}")
-    
-        # Load icon styles
-        try:
-            style_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                    "resources", "styles", "icons.css")
-            if os.path.exists(style_path):
-                with open(style_path, 'r') as css_file:
-                    self.setStyleSheet(css_file.read())
-        except Exception as e:
-            print(f"Failed to load icon styles: {e}")
-    
+
+    def __init__(
+        self,
+        config_manager=None,
+        parent=None,
+        load_plugins: bool = True,
+        engine=None,
+    ):
+        super().__init__(parent)
+
+        self.engine = engine
+
+        if config_manager is None and engine is not None:
+            config_manager = getattr(engine, "config_manager", None)
+            if config_manager is None:
+                config_manager = getattr(engine, "settings_manager", None)
+
+        if config_manager is None:
+            config_manager = ConfigManager()
+
+        self._apply_icon_styles()
+
         self.setWindowTitle("CreepyAI - Geolocation Intelligence")
         self.resize(1200, 800)
-        
+
         # Initialize components
         self.config_manager = config_manager
         self.database = Database()
         self.plugin_manager = PluginManager()
-        self.plugin_manager.load_plugins()
-        self.geocoder = GeocodingUtility(config_manager)
+        self._load_plugins = load_plugins
+        if load_plugins:
+            self.plugin_manager.load_plugins()
+        self.geocoder = GeocodingUtility(self.config_manager)
         self.export_manager = ExportManager()
         
         # Initialize recent projects list
@@ -88,7 +126,8 @@ class CreepyMainWindow(QMainWindow):
         self.locations = []
         
         # Configure plugins with database and config
-        self.plugin_manager.configure_plugins(config_manager, self.database)
+        if load_plugins:
+            self.plugin_manager.configure_plugins(self.config_manager, self.database)
         
         # Load settings
         self.load_settings()
@@ -98,7 +137,17 @@ class CreepyMainWindow(QMainWindow):
         # Check for export dependencies
         QApplication.instance().processEvents()
         self.check_export_dependencies()
-    
+
+        # Background analysis management
+        self._analysis_job_running = False
+        self._background_refresh_queue: "queue.Queue[Dict[str, object]]" = queue.Queue()
+        self._background_refresh_thread: Optional[threading.Thread] = None
+        self._dataset_watch_state: Dict[str, Tuple[float, float]] = {}
+        self._analysis_refresh_timer = QTimer(self)
+        self._analysis_refresh_timer.setSingleShot(False)
+        self._analysis_refresh_timer.timeout.connect(self._background_refresh_tick)
+        self._setup_background_tasks()
+
     def _setup_ui(self):
         """Set up the user interface."""
         try:
@@ -121,6 +170,12 @@ class CreepyMainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to set up UI: {e}")
             QMessageBox.critical(self, "Error", f"Failed to set up UI: {e}")
+
+    def _apply_icon_styles(self) -> None:
+        """Apply the shared icon stylesheet if it exists."""
+        stylesheet = _load_icon_stylesheet()
+        if stylesheet:
+            self.setStyleSheet(stylesheet)
     
     def _create_toolbars(self):
         """Create application toolbars."""
@@ -317,13 +372,460 @@ class CreepyMainWindow(QMainWindow):
         """Show about dialog."""
         dialog = AboutDialog(self)
         dialog.exec_()
-    
-    def analyze_data(self):
-        """Perform analysis on the project data."""
-        if not self.current_project or self.current_project.locations.count() == 0:
-            QMessageBox.information(self, "No Data", "No location data available to analyze.")
+
+    def _build_analysis_settings(self) -> Dict[str, object]:
+        """Collect analysis settings from the configuration manager."""
+
+        default_temperature = 0.2
+        default_tone = "objective"
+        default_depth = "balanced"
+        prompt_template = DEFAULT_PROMPT_TEMPLATE
+        overrides_list: List[Dict[str, object]] = []
+        selected_models: List[str] = []
+        max_records = 75
+        history_override: Optional[str] = None
+        base_data_dir: Optional[Path] = None
+
+        if self.config_manager:
+            temp_value = self.config_manager.get('analysis.default_temperature', default_temperature)
+            try:
+                default_temperature = float(temp_value)
+            except (TypeError, ValueError):
+                default_temperature = 0.2
+
+            tone_value = self.config_manager.get('analysis.default_tone', default_tone)
+            if tone_value:
+                default_tone = str(tone_value)
+
+            depth_value = self.config_manager.get('analysis.default_depth', default_depth)
+            if depth_value:
+                default_depth = str(depth_value)
+
+            template_value = self.config_manager.get('analysis.prompt_template', prompt_template)
+            if template_value:
+                prompt_template = str(template_value)
+
+            overrides_value = self.config_manager.get('analysis.model_overrides', [])
+            if isinstance(overrides_value, list):
+                overrides_list = overrides_value
+
+            models_value = self.config_manager.get('analysis.models', [])
+            if isinstance(models_value, list):
+                selected_models = [str(model).strip() for model in models_value if str(model).strip()]
+
+            history_override = self.config_manager.get('analysis.history_dir', '')
+            data_dir_value = self.config_manager.get('data_dir', '')
+            if data_dir_value:
+                base_data_dir = Path(str(data_dir_value))
+
+            max_records_value = self.config_manager.get('analysis.max_records', max_records)
+            try:
+                max_records = int(max_records_value)
+            except (TypeError, ValueError):
+                max_records = 75
+
+        if history_override:
+            history_dir = Path(str(history_override))
+        else:
+            history_dir = get_default_history_dir(base_data_dir)
+
+        model_settings: Dict[str, Dict[str, object]] = {}
+        ordered_models: List[str] = []
+
+        for entry in overrides_list:
+            model_name = str(entry.get('model', '')).strip()
+            if not model_name:
+                continue
+
+            config: Dict[str, object] = {}
+            try:
+                if entry.get('temperature') is not None:
+                    config['temperature'] = float(entry['temperature'])
+            except (TypeError, ValueError):
+                pass
+
+            tone_override = entry.get('tone')
+            if tone_override:
+                config['tone'] = str(tone_override)
+
+            depth_override = entry.get('depth')
+            if depth_override:
+                config['depth'] = str(depth_override)
+
+            prompt_override = entry.get('prompt_override')
+            if prompt_override:
+                config['prompt_template'] = str(prompt_override)
+
+            if config:
+                model_settings[model_name] = config
+
+            ordered_models.append(model_name)
+
+        if selected_models:
+            ordered_models = selected_models + [model for model in ordered_models if model not in selected_models]
+
+        if not ordered_models:
+            ordered_models = [
+                str(item.get('name'))
+                for item in SUPPORTED_LOCAL_LLM_MODELS
+                if item.get('name')
+            ]
+
+        unique_models: List[str] = []
+        for name in ordered_models:
+            if name and name not in unique_models:
+                unique_models.append(name)
+
+        return {
+            'temperature': default_temperature,
+            'tone': default_tone,
+            'depth': default_depth,
+            'prompt_template': prompt_template,
+            'model_settings': model_settings,
+            'models': unique_models,
+            'history_dir': history_dir,
+            'max_records': max_records,
+        }
+
+    def _setup_background_tasks(self) -> None:
+        """Configure timers and cached signatures for dataset refresh tasks."""
+
+        if not hasattr(self, "_analysis_refresh_timer"):
             return
-        QMessageBox.information(self, "Analysis", "Analysis feature not implemented yet.")
+
+        self._analysis_refresh_timer.stop()
+        self._dataset_watch_state.clear()
+        self._prime_dataset_watch_state()
+
+        if self._should_enable_background_refresh():
+            interval_minutes = self._get_refresh_interval_minutes()
+            self._analysis_refresh_timer.start(interval_minutes * 60 * 1000)
+            logger.info("Background dataset refresh enabled (interval=%s minutes)", interval_minutes)
+        else:
+            logger.info("Background dataset refresh disabled")
+
+    def _should_enable_background_refresh(self) -> bool:
+        if not getattr(self, "config_manager", None):
+            return False
+        return bool(self.config_manager.get('analysis.auto_refresh_enabled', False))
+
+    def _get_refresh_interval_minutes(self) -> int:
+        default_interval = 30
+        if not getattr(self, "config_manager", None):
+            return default_interval
+
+        value = self.config_manager.get('analysis.auto_refresh_interval_minutes', default_interval)
+        try:
+            interval = int(value)
+        except (TypeError, ValueError):
+            interval = default_interval
+        return max(1, interval)
+
+    def _prime_dataset_watch_state(self) -> None:
+        try:
+            from app.plugins.social_media import SOCIAL_MEDIA_PLUGINS
+        except Exception as exc:
+            logger.debug("Unable to prime dataset watcher: %s", exc)
+            return
+
+        for slug in SOCIAL_MEDIA_PLUGINS:
+            self._refresh_watch_state_for(slug)
+
+    def _refresh_watch_state_for(self, slug: str) -> None:
+        try:
+            from app.plugins.social_media import SOCIAL_MEDIA_PLUGINS
+            from app.plugins.social_media.base import ArchiveSocialMediaPlugin
+        except Exception as exc:
+            logger.debug("Unable to refresh dataset state: %s", exc)
+            return
+
+        plugin_cls = SOCIAL_MEDIA_PLUGINS.get(slug)
+        if not plugin_cls:
+            return
+
+        plugin: ArchiveSocialMediaPlugin = plugin_cls()
+        data_dir = Path(plugin.get_data_directory())
+        signature = self._calculate_data_signature(data_dir, plugin.dataset_filename)
+        dataset_path = data_dir / plugin.dataset_filename
+
+        try:
+            dataset_mtime = float(dataset_path.stat().st_mtime)
+        except OSError:
+            dataset_mtime = 0.0
+
+        self._dataset_watch_state[slug] = (signature, dataset_mtime)
+
+    def _calculate_data_signature(self, path: Path, dataset_filename: str) -> float:
+        try:
+            path = path.expanduser()
+        except Exception:
+            pass
+
+        if not path.exists():
+            return 0.0
+
+        if path.is_file():
+            try:
+                return float(path.stat().st_mtime)
+            except OSError:
+                return 0.0
+
+        latest = 0.0
+        dataset_filename = dataset_filename or ""
+
+        try:
+            for child in path.rglob("*"):
+                if dataset_filename and child.name == dataset_filename:
+                    continue
+
+                try:
+                    mtime = float(child.stat().st_mtime)
+                except OSError:
+                    continue
+
+                if mtime > latest:
+                    latest = mtime
+        except OSError:
+            return latest
+
+        return latest
+
+    def _detect_archive_changes(self) -> List[str]:
+        changed: List[str] = []
+
+        try:
+            from app.plugins.social_media import SOCIAL_MEDIA_PLUGINS
+            from app.plugins.social_media.base import ArchiveSocialMediaPlugin
+        except Exception as exc:
+            logger.debug("Unable to detect archive changes: %s", exc)
+            return changed
+
+        for slug, plugin_cls in SOCIAL_MEDIA_PLUGINS.items():
+            plugin: ArchiveSocialMediaPlugin = plugin_cls()
+            data_dir = Path(plugin.get_data_directory())
+            signature = self._calculate_data_signature(data_dir, plugin.dataset_filename)
+            dataset_path = data_dir / plugin.dataset_filename
+
+            try:
+                dataset_mtime = float(dataset_path.stat().st_mtime)
+            except OSError:
+                dataset_mtime = 0.0
+
+            previous = self._dataset_watch_state.get(slug)
+            if previous is None:
+                self._dataset_watch_state[slug] = (signature, dataset_mtime)
+                continue
+
+            previous_signature, _previous_dataset_mtime = previous
+
+            should_refresh = False
+            if dataset_mtime == 0.0 and signature > 0.0:
+                should_refresh = True
+            elif signature > previous_signature and signature > dataset_mtime:
+                should_refresh = True
+
+            if should_refresh:
+                changed.append(slug)
+
+            self._dataset_watch_state[slug] = (signature, dataset_mtime)
+
+        return changed
+
+    def _background_refresh_tick(self) -> None:
+        self._consume_background_results()
+
+        if not self._should_enable_background_refresh():
+            return
+
+        if self._background_refresh_thread is not None and self._background_refresh_thread.is_alive():
+            return
+
+        changed = self._detect_archive_changes()
+        if not changed:
+            return
+
+        self._background_refresh_thread = threading.Thread(
+            target=self._run_background_refresh,
+            args=(changed,),
+            daemon=True,
+        )
+        self._background_refresh_thread.start()
+
+    def _run_background_refresh(self, slugs: List[str]) -> None:
+        try:
+            from app.data_collection.social_media_data_collector import SocialMediaDataCollector
+        except Exception as exc:
+            logger.exception("Unable to start dataset collector: %s", exc)
+            self._background_refresh_queue.put({"error": str(exc), "slugs": slugs})
+            QTimer.singleShot(0, self._process_background_queue)
+            self._background_refresh_thread = None
+            return
+
+        try:
+            collector = SocialMediaDataCollector()
+            datasets = collector.collect(plugin_slugs=slugs)
+            run_analysis = bool(
+                getattr(self, "config_manager", None)
+                and self.config_manager.get('analysis.auto_run_after_refresh', False)
+            )
+            self._background_refresh_queue.put(
+                {
+                    "datasets": datasets,
+                    "slugs": slugs,
+                    "run_analysis": run_analysis,
+                }
+            )
+        except Exception as exc:
+            logger.exception("Background dataset refresh failed: %s", exc)
+            self._background_refresh_queue.put({"error": str(exc), "slugs": slugs})
+        finally:
+            self._background_refresh_thread = None
+            QTimer.singleShot(0, self._process_background_queue)
+
+    def _process_background_queue(self) -> None:
+        self._consume_background_results()
+
+    def _consume_background_results(self) -> None:
+        updated = False
+
+        while True:
+            try:
+                result = self._background_refresh_queue.get_nowait()
+            except queue.Empty:
+                break
+
+            error = result.get("error")
+            if error:
+                logger.warning("Background dataset refresh issue: %s", error)
+                if hasattr(self, "statusbar") and self.statusbar:
+                    self.statusbar.showMessage(f"Dataset refresh error: {error}", 10000)
+                continue
+
+            slugs = result.get("slugs") or []
+            for slug in slugs:
+                self._refresh_watch_state_for(slug)
+
+            datasets = result.get("datasets") or {}
+            if datasets and hasattr(self, "statusbar") and self.statusbar:
+                refreshed = ", ".join(sorted(datasets.keys()))
+                self.statusbar.showMessage(f"Refreshed datasets for {refreshed}", 10000)
+
+            run_analysis = bool(result.get("run_analysis"))
+            if run_analysis and self.current_project:
+                if not self._analysis_job_running:
+                    QTimer.singleShot(0, functools.partial(self.analyze_data, False, auto_trigger=True))
+                else:
+                    if hasattr(self, "statusbar") and self.statusbar:
+                        self.statusbar.showMessage("Analysis already running; skipping auto-run.", 10000)
+            elif run_analysis and not self.current_project and hasattr(self, "statusbar") and self.statusbar:
+                self.statusbar.showMessage("Datasets refreshed. Open a project to run analysis.", 10000)
+
+            updated = True
+
+        if updated and self._should_enable_background_refresh() and not self._analysis_refresh_timer.isActive():
+            self._analysis_refresh_timer.start(self._get_refresh_interval_minutes() * 60 * 1000)
+
+    def analyze_data(self, checked=False, *, auto_trigger: bool = False):
+        """Perform analysis on the project data using local LLMs."""
+
+        if not self.current_project:
+            message = "Open or create a project before running analysis."
+            if auto_trigger and hasattr(self, "statusbar") and self.statusbar:
+                self.statusbar.showMessage(message, 10000)
+            else:
+                QMessageBox.information(self, "No Project", message)
+            return
+
+        if self._analysis_job_running:
+            if not auto_trigger:
+                QMessageBox.information(self, "Analysis Running", "An analysis task is already in progress.")
+            return
+
+        try:
+            settings = self._build_analysis_settings()
+            records = load_social_media_records(limit_per_plugin=settings['max_records'])
+        except Exception as exc:
+            logger.exception("Failed to load curated datasets: %s", exc)
+            message = f"Failed to load curated datasets: {exc}"
+            if auto_trigger and hasattr(self, "statusbar") and self.statusbar:
+                self.statusbar.showMessage(message, 10000)
+            else:
+                QMessageBox.critical(self, "Analysis Error", message)
+            return
+
+        if not records:
+            message = "No curated social media datasets were found. Collect new data before running analysis."
+            if auto_trigger and hasattr(self, "statusbar") and self.statusbar:
+                self.statusbar.showMessage(message, 10000)
+            else:
+                QMessageBox.information(
+                    self,
+                    "No Curated Data",
+                    message,
+                )
+            return
+
+        self._analysis_job_running = True
+
+        analyzer = LocalLLMAnalyzer(
+            models=settings['models'],
+            max_records=settings['max_records'],
+            temperature=settings['temperature'],
+            prompt_template=settings['prompt_template'],
+            default_tone=settings['tone'],
+            default_depth=settings['depth'],
+            model_settings=settings['model_settings'],
+        )
+
+        subject = self.current_project.name or "Investigation"
+        focus = self.current_project.description or None
+
+        progress = QProgressDialog("Running local LLM analysis...", None, 0, 0, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setCancelButton(None)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+
+        try:
+            result = analyzer.analyze_subject(subject, records, focus=focus)
+        except Exception as exc:
+            logger.exception("Local LLM analysis failed: %s", exc)
+            QMessageBox.critical(self, "Analysis Error", f"Local LLM analysis failed: {exc}")
+            progress.close()
+            self._analysis_job_running = False
+            return
+        finally:
+            progress.close()
+
+        self._analysis_job_running = False
+
+        history_dir: Path = settings['history_dir']
+        saved_entry = None
+        try:
+            saved_entry = persist_analysis_result(history_dir, result)
+            result['integrity'] = saved_entry.integrity
+            result['history_path'] = str(saved_entry.file_path)
+        except Exception as exc:
+            logger.exception("Failed to persist analysis result: %s", exc)
+            QMessageBox.warning(
+                self,
+                "History Warning",
+                f"Analysis completed but saving the result failed: {exc}",
+            )
+
+        history_entries = load_recent_history(history_dir, limit=10)
+        if saved_entry is not None:
+            history_entries = [saved_entry] + [
+                entry for entry in history_entries if entry.file_path != saved_entry.file_path
+            ]
+
+        dialog = LLMAnalysisDialog(self)
+        dialog.set_analysis_results(result, history_entries, saved_entry)
+        dialog.exec_()
+
+        if saved_entry is not None and hasattr(self, 'statusbar') and self.statusbar:
+            self.statusbar.showMessage(f"Analysis saved to {saved_entry.file_path}", 10000)
     
     def export_project(self, format="kml"):
         """Export project data."""
@@ -483,435 +985,49 @@ class CreepyMainWindow(QMainWindow):
     def show_settings(self):
         """Open application settings dialog"""
         try:
-            from ui.SettingsDialog import SettingsDialog
+            from app.gui.SettingsDialog import SettingsDialog
             settings_dialog = SettingsDialog(self.config_manager, parent=self)
-            if settings_dialog.exec_():
-                # Apply settings if needed
-                self.statusbar.showMessage("Settings updated")
+            if settings_dialog.exec_() == QDialog.Accepted:
+                self._setup_background_tasks()
+                if hasattr(self, "statusbar") and self.statusbar:
+                    self.statusbar.showMessage("Settings updated", 5000)
         except Exception as e:
             logger.error(f"Error opening settings: {str(e)}")
-            QMessageBox.warning(self, "Settings Error", 
+            QMessageBox.warning(self, "Settings Error",
                                f"Could not open settings: {str(e)}")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = CreepyAIGUI(root)
-    root.mainloop()
 
-"""
-Main GUI entry point for CreepyAI
 
-This module initializes and launches the Qt GUI for CreepyAI.
-"""
-import sys
-import os
-import logging
-from pathlib import Path
+def launch_gui(
+    config_path: Optional[str] = None,
+    app_root: Optional[str] = None,
+    load_plugins: bool = True,
+) -> int:
+    """Launch the CreepyAI Qt application."""
 
-# Add project root to path if needed
-project_root = Path(__file__).parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+    if app_root and app_root not in sys.path:
+        sys.path.insert(0, app_root)
 
-# Import Qt
-try:
-    from PyQt5.QtWidgets import QApplication, QMainWindow, QSplashScreen, QMessageBox
-    from PyQt5.QtCore import Qt, QTimer
-    from PyQt5.QtGui import QPixmap
-except ImportError:
-    logging.error("PyQt5 not found. Please install it with: pip install PyQt5")
-    sys.exit(1)
-
-# Import CreepyAI modules
-from app.gui.main.CreepyUI import Ui_MainWindow
-from utilities.webengine_compat import setup_webengine_options
-from app.core.logger import get_logger
-
-logger = get_logger('creepyai.gui.launcher')
-
-class CreepyAIMainWindow(QMainWindow):
-    """Main window for CreepyAI application"""
-    
-    def __init__(self, app_instance, parent=None):
-        super().__init__(parent)
-        self.app_instance = app_instance
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-        
-        # Set window title
-        self.setWindowTitle(f"CreepyAI v{app_instance.config.get('app.version', '2.5.0')}")
-        
-        # Connect signals and slots
-        self.setup_connections()
-        
-        # Initialize plugins
-        self.plugin_widgets = {}
-        self.load_plugins()
-    
-    def setup_connections(self):
-        """Set up signal/slot connections"""
-        # File menu
-        if hasattr(self.ui, 'actionNew'):
-            self.ui.actionNew.triggered.connect(self.new_project)
-        if hasattr(self.ui, 'actionOpen'):
-            self.ui.actionOpen.triggered.connect(self.open_project)
-        if hasattr(self.ui, 'actionSave'):
-            self.ui.actionSave.triggered.connect(self.save_project)
-        if hasattr(self.ui, 'actionExit'):
-            self.ui.actionExit.triggered.connect(self.close)
-        
-        # Plugins menu setup if exists
-        if hasattr(self.ui, 'menuPlugins'):
-            self.setup_plugins_menu()
-    
-    def setup_plugins_menu(self):
-        """Set up the plugins menu with available plugins"""
-        if not hasattr(self.ui, 'menuPlugins'):
-            return
-            
-        self.ui.menuPlugins.clear()
-        
-        # Add actions for each plugin
-        for plugin_name, plugin in self.app_instance.plugin_manager.active_plugins.items():
-            action = self.ui.menuPlugins.addAction(plugin_name)
-            action.triggered.connect(lambda checked, name=plugin_name: self.run_plugin(name))
-    
-    def load_plugins(self):
-        """Load and initialize plugin UI components"""
-        logger.info("Initializing plugin UI components")
-        for plugin_name, plugin_info in self.app_instance.plugin_manager.active_plugins.items():
-            plugin = plugin_info.get('instance')
-            if not plugin:
-                continue
-                
-            # If plugin has UI component, initialize it
-            if hasattr(plugin, 'create_widget'):
-                try:
-                    widget = plugin.create_widget()
-                    if widget:
-                        self.plugin_widgets[plugin_name] = widget
-                        logger.debug(f"Created UI widget for plugin {plugin_name}")
-                except Exception as e:
-                    logger.error(f"Error creating widget for plugin {plugin_name}: {e}")
-    
-    def run_plugin(self, plugin_name):
-        """Run a specific plugin"""
-        logger.info(f"Running plugin: {plugin_name}")
-        plugin = self.app_instance.plugin_manager.get_plugin(plugin_name)
-        if plugin:
-            try:
-                # Check if plugin has a GUI method
-                if hasattr(plugin, 'run_gui'):
-                    plugin.run_gui(self)
-                else:
-                    # Fall back to regular execute method
-                    result = plugin.execute()
-                    QMessageBox.information(self, f"Plugin {plugin_name}", 
-                                           f"Plugin executed with result: {result}")
-            except Exception as e:
-                logger.error(f"Error running plugin {plugin_name}: {e}")
-                QMessageBox.warning(self, "Plugin Error", 
-                                    f"Error running plugin {plugin_name}: {str(e)}")
-    
-    def new_project(self):
-        """Create a new project"""
-        from app.gui.dialogs.PersonProjectWizard import PersonProjectWizard
-        wizard = PersonProjectWizard(self)
-        if wizard.exec_():
-            # Get project data from wizard
-            project_data = wizard.get_project_data()
-            
-            # Create new project
-            project = self.app_instance.create_project(
-                project_data.get('name', 'New Project'),
-                project_data.get('target')
-            )
-            
-            # Update UI
-            self.update_project_ui(project)
-            
-            logger.info(f"Created new project: {project.name}")
-    
-    def open_project(self):
-        """Open an existing project"""
-        from PyQt5.QtWidgets import QFileDialog
-        
-        projects_dir = self.app_instance.config.get('app.projects_directory', 
-                                                  os.path.join(project_root, 'projects'))
-        
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Project", projects_dir, "Project Files (*.json)"
-        )
-        
-        if file_path:
-            try:
-                project = self.app_instance.load_project(file_path)
-                if project:
-                    self.update_project_ui(project)
-                    logger.info(f"Opened project: {project.name}")
-                else:
-                    QMessageBox.warning(self, "Error", "Failed to load project")
-            except Exception as e:
-                logger.error(f"Error opening project: {e}")
-                QMessageBox.warning(self, "Error", f"Failed to open project: {str(e)}")
-    
-    def save_project(self):
-        """Save the current project"""
-        project = self.app_instance.current_project
-        if not project:
-            QMessageBox.information(self, "No Project", "No project to save")
-            return
-            
-        if project.path:
-            project.save()
-            logger.info(f"Saved project: {project.name}")
-        else:
-            from PyQt5.QtWidgets import QFileDialog
-            
-            projects_dir = self.app_instance.config.get('app.projects_directory', 
-                                                      os.path.join(project_root, 'projects'))
-            
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save Project", os.path.join(projects_dir, f"{project.name}.json"),
-                "Project Files (*.json)"
-            )
-            
-            if file_path:
-                project.save(file_path)
-                logger.info(f"Saved project to: {file_path}")
-    
-    def update_project_ui(self, project):
-        """Update UI to reflect loaded project"""
-        self.app_instance.current_project = project
-        
-        # Update window title
-        self.setWindowTitle(f"CreepyAI - {project.name}")
-        
-        # Update any project-dependent UI elements
-        if hasattr(self.ui, 'projectNameLabel'):
-            self.ui.projectNameLabel.setText(project.name)
-            
-        # Update any maps or location displays
-        self.update_locations_display()
-    
-    def update_locations_display(self):
-        """Update the display of locations"""
-        project = self.app_instance.current_project
-        if not project:
-            return
-            
-        # Update locations table if it exists
-        if hasattr(self.ui, 'locationsTable'):
-            self.update_locations_table(project.locations)
-            
-        # Update map if it exists
-        if hasattr(self.ui, 'mapWidget'):
-            self.update_map(project.locations)
-    
-    def update_locations_table(self, locations):
-        """Update the locations table with project locations"""
-        # Implementation depends on actual table widget being used
-        pass
-    
-    def update_map(self, locations):
-        """Update the map with project locations"""
-        # Implementation depends on actual map widget being used
-        pass
-
-def show_splash_screen():
-    """Show a splash screen while loading"""
-    splash_path = os.path.join(project_root, 'assets', 'icons', 'ui', 'app_icon.png')
-    
-    if os.path.exists(splash_path):
-        splash_pixmap = QPixmap(splash_path)
-        splash = QSplashScreen(splash_pixmap, Qt.WindowStaysOnTopHint)
-        splash.show()
-        return splash
-    
-    return None
-
-def launch_gui(app_instance):
-    """
-    Launch the CreepyAI GUI
-    
-    Args:
-        app_instance: The CreepyAI application instance
-    """
     try:
-        # Configure web engine for maps
         setup_webengine_options()
-        
-        # Create Qt application if it doesn't exist
-        qt_app = QApplication.instance()
-        if not qt_app:
-            qt_app = QApplication(sys.argv)
-        
-        # Show splash screen
-        splash = show_splash_screen()
-        
-        # Create and show main window
-        main_window = CreepyAIMainWindow(app_instance)
-        main_window.show()
-        
-        # Close splash screen if it exists
-        if splash:
-            QTimer.singleShot(1000, splash.close)
-        
-        # Run the application
-        sys.exit(qt_app.exec_())
-        
-    except Exception as e:
-        logger.critical(f"Error launching GUI: {e}", exc_info=True)
-        raise
+    except Exception:
+        logger.exception("Failed to configure Qt WebEngine options")
 
-"""
-Simple CreepyAI GUI for testing.
-"""
-import os
-import sys
-import logging
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QLabel, 
-                           QPushButton, QMenuBar, QMenu, QAction)
-from PyQt5.QtCore import Qt
+    config_manager = ConfigManager(config_path)
 
-# Add parent directory to path to allow importing
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+    qt_app = QApplication.instance()
+    if qt_app is None:
+        qt_app = QApplication(sys.argv)
 
-# Import UI modules
-try:
-    from app.gui.ui.about_dialog import AboutDialog
-    from app.gui.ui.plugin_config_dialog import PluginsConfigDialog
-    from app.gui.ui.settings_dialog import SettingsDialog
-except ImportError as e:
-    logging.warning(f"Could not import UI components: {e}")
-    # Define minimal versions if import fails
-    class AboutDialog:
-        def __init__(self, parent=None):
-            pass
-        def exec_(self):
-            return True
-            
-    class PluginsConfigDialog:
-        def __init__(self, plugin_manager=None, parent=None):
-            pass
-        def exec_(self):
-            return True
-            
-    class SettingsDialog:
-        def __init__(self, config=None, parent=None):
-            pass
-        def exec_(self):
-            return True
+    window = CreepyMainWindow(
+        config_manager=config_manager,
+        load_plugins=load_plugins,
+    )
+    window.show()
 
-logger = logging.getLogger('creepyai.gui')
+    return qt_app.exec_()
 
-class CreepyAIGUI(QMainWindow):
-    """Main window for CreepyAI application."""
-    
-    def __init__(self, engine=None):
-        """Initialize the main window.
-        
-        Args:
-            engine: CreepyAI engine instance
-        """
-        super().__init__()
-        self.engine = engine
-        self.setWindowTitle("CreepyAI")
-        self.resize(800, 600)
-        
-        # Create central widget and layout
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
-        
-        # Add welcome label
-        self.welcome_label = QLabel("Welcome to CreepyAI!")
-        self.welcome_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.welcome_label)
-        
-        # Add version info
-        version = engine.get_version() if engine else "2.5.0"
-        self.version_label = QLabel(f"Version: {version}")
-        self.version_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.version_label)
-        
-        # Add test button
-        self.test_button = QPushButton("Test Connection")
-        self.test_button.clicked.connect(self.test_connection)
-        self.layout.addWidget(self.test_button)
-        
-        # Add settings button
-        self.settings_button = QPushButton("Settings")
-        self.settings_button.clicked.connect(self.show_settings)
-        self.layout.addWidget(self.settings_button)
-        
-        # Add plugins button
-        self.plugins_button = QPushButton("Plugins")
-        self.plugins_button.clicked.connect(self.show_plugins)
-        self.layout.addWidget(self.plugins_button)
-        
-        # Create menus
-        self.create_menus()
-        
-        logger.info("CreepyAI GUI initialized")
-        
-    def create_menus(self):
-        """Create the application menus."""
-        # File menu
-        file_menu = self.menuBar().addMenu("&File")
-        
-        exit_action = QAction("E&xit", self)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-        
-        # Tools menu
-        tools_menu = self.menuBar().addMenu("&Tools")
-        
-        plugins_action = QAction("&Plugins", self)
-        plugins_action.triggered.connect(self.show_plugins)
-        tools_menu.addAction(plugins_action)
-        
-        settings_action = QAction("&Settings", self)
-        settings_action.triggered.connect(self.show_settings)
-        tools_menu.addAction(settings_action)
-        
-        # Help menu
-        help_menu = self.menuBar().addMenu("&Help")
-        
-        about_action = QAction("&About", self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
-        
-    def test_connection(self):
-        """Test the connection to the engine."""
-        if self.engine:
-            status = self.engine.get_status()
-            self.welcome_label.setText(f"Engine status: {status['initialized']}")
-            logger.info(f"Engine status: {status}")
-        else:
-            self.welcome_label.setText("No engine connected")
-            logger.warning("No engine connected")
-            
-    def show_plugins(self):
-        """Show the plugins dialog."""
-        if self.engine:
-            plugin_count = len(self.engine.plugins)
-            dialog = PluginsConfigDialog(self.engine.plugins, self)
-            dialog.exec_()
-            self.welcome_label.setText(f"Loaded plugins: {plugin_count}")
-            logger.info(f"Loaded plugins: {plugin_count}")
-        else:
-            self.welcome_label.setText("No engine connected")
-            logger.warning("No engine connected")
-            
-    def show_settings(self):
-        """Show the settings dialog."""
-        dialog = SettingsDialog(self.engine.config if self.engine else None, self)
-        dialog.exec_()
-            
-    def show_about(self):
-        """Show the about dialog."""
-        dialog = AboutDialog(self)
-        dialog.exec_()
-        self.welcome_label.setText("CreepyAI - OSINT Platform")
-        logger.info("About dialog shown")
+
+CreepyAIGUI = CreepyMainWindow
+
+__all__ = ["CreepyMainWindow", "CreepyAIGUI", "launch_gui"]

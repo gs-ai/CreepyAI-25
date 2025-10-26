@@ -33,27 +33,14 @@ class LocationHistoryPlugin(BasePlugin):
     # Metadata helpers
     # ------------------------------------------------------------------
     def get_configuration_options(self) -> List[dict]:
-        return [
-            {
-                "name": "data_directory",
-                "display_name": "Location data directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": (
-                    "Directory containing JSON or CSV files.  Each record must "
-                    "provide latitude, longitude and a timestamp field."
-                ),
-            }
-        ]
+        return []
 
     def is_configured(self) -> tuple[bool, str]:
-        directory = self.config.get("data_directory")
-        if not directory:
-            return False, "Location data directory is not configured"
-        if not Path(directory).expanduser().exists():
-            return False, f"Location data directory does not exist: {directory}"
-        return True, "LocationHistoryPlugin is configured"
+        if self.has_input_data():
+            return True, "LocationHistoryPlugin is configured"
+
+        directory = self.get_data_directory()
+        return False, f"Add location history exports to {directory}"
 
     # ------------------------------------------------------------------
     # Public behaviour
@@ -71,7 +58,7 @@ class LocationHistoryPlugin(BasePlugin):
             logger.warning("LocationHistoryPlugin not configured: %s", message)
             return []
 
-        directory = Path(self.config["data_directory"]).expanduser()
+        directory = Path(self.get_data_directory()).expanduser()
         samples: List[LocationPoint] = []
         for path in self._iter_location_files(directory):
             try:
