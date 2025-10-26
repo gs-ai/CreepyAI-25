@@ -40,16 +40,15 @@ plugins:
   GeoIPPlugin:
     enabled: true
     priority: 10
-    description: "Plugin for IP address geolocation"
-    version: "1.1.0"
+    description: "Offline IP address geolocation"
+    version: "2.0.0"
     author: "CreepyAI Team"
     required: false
     auto_load: true
-    dependencies: ["requests", "geoip2"]
+    dependencies: []
     config:
-      database_path: "${DATA_DIR}/GeoLite2-City.mmdb"
-      cache_results: true
-      cache_timeout: 86400
+      database_path: "${DATA_DIR}/geoip_database.csv"
+      fallback_precision: 2
   
   SocialMediaPlugin:
     enabled: true
@@ -166,7 +165,6 @@ plugins:
     auto_load: true
     dependencies: ["requests", "geopy"]
     config:
-      api_key: "YOUR_API_KEY"
       use_cache: true
       cache_timeout: 86400
       max_retries: 3

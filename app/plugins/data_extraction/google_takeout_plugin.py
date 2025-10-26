@@ -23,28 +23,18 @@ class GoogleTakeoutPlugin(BasePlugin):
         )
 
     def get_configuration_options(self) -> List[dict]:
-        return [
-            {
-                "name": "archive_directory",
-                "display_name": "Takeout directory",
-                "type": "directory",
-                "default": "",
-                "required": True,
-                "description": (
-                    "Path containing JSON files extracted from a Google Takeout "
-                    "archive (Location History, Google Maps etc.)."
-                ),
-            }
-        ]
+        return []
 
     def is_configured(self) -> tuple[bool, str]:
         directory = self.config.get("archive_directory")
-        if not directory:
-            return False, "No Takeout directory configured"
-        resolved = Path(directory).expanduser()
-        if not resolved.exists():
-            return False, f"Takeout directory does not exist: {directory}"
-        return True, "GoogleTakeoutPlugin is configured"
+        if directory and Path(directory).expanduser().exists():
+            return True, "GoogleTakeoutPlugin is configured"
+
+        if self.has_input_data():
+            return True, "GoogleTakeoutPlugin is configured"
+
+        managed_dir = self.get_data_directory()
+        return False, f"Add Google Takeout exports to {managed_dir}"
 
     def collect_locations(
         self,
@@ -52,12 +42,15 @@ class GoogleTakeoutPlugin(BasePlugin):
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
     ) -> List[LocationPoint]:
-        configured, message = self.is_configured()
-        if not configured:
-            logger.warning("GoogleTakeoutPlugin not configured: %s", message)
-            return []
+        directory_setting = self.config.get("archive_directory")
+        if directory_setting and Path(directory_setting).expanduser().exists():
+            directory = Path(directory_setting).expanduser()
+        else:
+            if not self.has_input_data():
+                logger.warning("GoogleTakeoutPlugin has no data to process")
+                return []
+            directory = Path(self.get_data_directory()).expanduser()
 
-        directory = Path(self.config["archive_directory"]).expanduser()
         samples: List[LocationPoint] = []
         for path in self._iter_json_files(directory):
             try:

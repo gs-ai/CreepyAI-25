@@ -1,19 +1,21 @@
-"""Simplified GeoIP plugin used by the standalone CLI entry point.
+"""Offline-only GeoIP plugin used by CreepyAI.
 
-The original project bundled a massive module that attempted to talk to a
-variety of third party services.  The generated source was badly formatted and
-Python refused to import it which meant the entire application could not start.
-This module provides a small, well tested implementation that offers the same
-public surface area without any external dependencies.
+This implementation provides deterministic IP to location lookups without
+contacting external services.  It consumes a user-supplied CSV database
+describing IP ranges and their associated coordinates.
 """
 
 from __future__ import annotations
 
+import csv
 import ipaddress
 import logging
+from bisect import bisect_right
 from dataclasses import replace
 from datetime import datetime
-from typing import Dict, Iterable, List, Optional
+from pathlib import Path
+from threading import Lock
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from app.plugins.base_plugin import BasePlugin, LocationPoint
 
@@ -21,17 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 class GeoIPPlugin(BasePlugin):
-    """Look up approximate coordinates for IP addresses.
+    """Look up approximate coordinates for IP addresses without APIs."""
 
-    The plugin exposes a deterministic, dependency free implementation so the
-    rest of the application can rely on it during tests and manual execution.
-    Results are intentionally coarse and are derived from a very small static
-    table which covers the most common documentation IPs.  Unknown addresses are
-    mapped to pseudo coordinates generated from the integer representation of
-    the IP – this keeps the behaviour stable between runs without phoning home.
-    """
-
-    _KNOWN_IPS: Dict[str, LocationPoint] = {}
+    _KNOWN_IPS: Dict[str, Tuple[float, float, str]] = {
+        "8.8.8.8": (37.3861, -122.0839, "Google Public DNS"),
+        "1.1.1.1": (-33.4940, 143.2104, "Cloudflare DNS"),
+        "9.9.9.9": (41.5000, -81.6950, "Quad9 DNS"),
+        "208.67.222.222": (37.7697, -122.3933, "OpenDNS"),
+    }
 
     def __init__(self) -> None:
         super().__init__(
@@ -39,40 +38,36 @@ class GeoIPPlugin(BasePlugin):
             description="Derive approximate coordinates for IP addresses",
         )
 
-        now = datetime.utcnow()
-        # Populate the static mapping once.  We keep it on the instance to avoid
-        # rebuilding the dataclass objects on every call while keeping the module
-        # import side effects minimal.
-        if not self._KNOWN_IPS:
-            self._KNOWN_IPS = {
-                "8.8.8.8": LocationPoint(
-                    latitude=37.3861,
-                    longitude=-122.0839,
-                    timestamp=now,
-                    source="GeoIP",
-                    context="Google Public DNS",
-                ),
-                "1.1.1.1": LocationPoint(
-                    latitude=-33.4940,
-                    longitude=143.2104,
-                    timestamp=now,
-                    source="GeoIP",
-                    context="Cloudflare DNS",
-                ),
-                "9.9.9.9": LocationPoint(
-                    latitude=41.5000,
-                    longitude=-81.6950,
-                    timestamp=now,
-                    source="GeoIP",
-                    context="Quad9 DNS",
-                ),
-            }
+        self._default_database_path = Path(self.data_dir) / "geoip_database.csv"
+        self.config.setdefault("database_path", str(self._default_database_path))
+        self.config.setdefault("fallback_precision", 2)
+
+        self._database_path: Optional[Path] = None
+        self._database_mtime: Optional[float] = None
+        self._range_starts: List[int] = []
+        self._ranges: List[Tuple[int, int, float, float, str]] = []
+        self._cache: Dict[str, LocationPoint] = {}
+        self._lock = Lock()
+
+        self._ensure_database_exists()
 
     # ------------------------------------------------------------------
     # Plugin metadata helpers
     # ------------------------------------------------------------------
     def get_configuration_options(self) -> List[Dict[str, object]]:
         return [
+            {
+                "name": "database_path",
+                "display_name": "GeoIP CSV database",
+                "type": "file",
+                "default": str(self._default_database_path),
+                "required": True,
+                "description": (
+                    "Path to a CSV file with columns ip_start, ip_end, latitude, "
+                    "longitude, city, region, country.  Provide a dataset before "
+                    "running lookups."
+                ),
+            },
             {
                 "name": "fallback_precision",
                 "display_name": "Fallback precision",
@@ -82,11 +77,22 @@ class GeoIPPlugin(BasePlugin):
                     "Number of decimal places to keep when deriving pseudo "
                     "coordinates for unknown IP addresses"
                 ),
-            }
+            },
         ]
 
-    def is_configured(self) -> tuple[bool, str]:
-        # The plugin has sensible defaults and does not require user input.
+    def is_configured(self) -> Tuple[bool, str]:
+        try:
+            path = self._get_database_path()
+        except Exception as exc:  # pragma: no cover - extremely rare
+            return False, f"Failed to resolve database path: {exc}"
+
+        if not path.exists():
+            try:
+                self._ensure_database_exists(path)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.error("Unable to verify GeoIP dataset: %s", exc)
+                return False, f"GeoIP database is missing: {exc}"
+
         return True, "GeoIPPlugin is configured"
 
     # ------------------------------------------------------------------
@@ -112,11 +118,7 @@ class GeoIPPlugin(BasePlugin):
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
     ) -> List[LocationPoint]:
-        """Return a single :class:`LocationPoint` describing ``target``.
-
-        The optional date filters are accepted for compatibility with other
-        plugins but they are not used because the geolocation dataset is static.
-        """
+        """Return location information for ``target``."""
 
         ip = self._normalise_ip(target)
         if not ip:
@@ -131,26 +133,125 @@ class GeoIPPlugin(BasePlugin):
                 ip,
             )
 
-        point = self._KNOWN_IPS.get(ip)
-        if point:
-            logger.debug("GeoIPPlugin returned cached location for %s", ip)
-            # LocationPoint instances are mutable; return a copy so callers do
-            # not mutate the cached object.
-            return [replace(point, timestamp=datetime.utcnow())]
+        cached = self._cache.get(ip)
+        if cached:
+            return [replace(cached, timestamp=datetime.utcnow())]
 
-        precision = int(self.config.get("fallback_precision", 2) or 0)
-        derived = self._derive_location(ip, max(0, min(6, precision)))
-        logger.debug("GeoIPPlugin derived location %s for %s", derived, ip)
-        return [derived]
+        dataset_point = self._lookup_from_dataset(ip)
+        if dataset_point:
+            self._cache[ip] = dataset_point
+            return [replace(dataset_point, timestamp=datetime.utcnow())]
 
-    # The PluginManager adapts ``collect_locations`` into ``run`` but exposing a
-    # dedicated ``run`` method keeps the API explicit and improves readability.
+        derived = self._derive_location(ip)
+        self._cache[ip] = derived
+        return [replace(derived, timestamp=datetime.utcnow())]
+
     def run(self, target: str) -> List[LocationPoint]:
         return self.collect_locations(target)
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+    def _get_database_path(self) -> Path:
+        configured = self.config.get("database_path") or str(self._default_database_path)
+        return Path(str(configured)).expanduser()
+
+    def _ensure_database_exists(self, path: Optional[Path] = None) -> None:
+        if path is None:
+            path = self._get_database_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            return
+
+        logger.warning(
+            "GeoIP dataset not found at %s; provide a CSV dataset before running lookups",
+            path,
+        )
+
+    def _load_database(self) -> None:
+        path = self._get_database_path()
+        try:
+            mtime = path.stat().st_mtime
+        except FileNotFoundError:
+            self._ensure_database_exists(path)
+            if not path.exists():
+                with self._lock:
+                    self._database_path = path
+                    self._database_mtime = None
+                    self._range_starts = []
+                    self._ranges = []
+                    self._cache.clear()
+                return
+            mtime = path.stat().st_mtime
+
+        if self._database_path == path and self._database_mtime == mtime:
+            return
+
+        with self._lock:
+            if self._database_path == path and self._database_mtime == mtime:
+                return
+
+            range_starts: List[int] = []
+            ranges: List[Tuple[int, int, float, float, str]] = []
+
+            with path.open("r", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                for row in reader:
+                    try:
+                        start_ip = ipaddress.ip_address(row["ip_start"].strip())
+                        end_ip = ipaddress.ip_address((row.get("ip_end") or row["ip_start"]).strip())
+                        latitude = float(row["latitude"])
+                        longitude = float(row["longitude"])
+                        context_parts = [
+                            row.get("city", "").strip(),
+                            row.get("region", "").strip(),
+                            row.get("country", "").strip(),
+                        ]
+                        context = ", ".join(part for part in context_parts if part)
+                        if not context:
+                            context = "GeoIP offline dataset"
+                    except Exception as exc:
+                        logger.debug("Skipping GeoIP row due to %s: %s", exc, row)
+                        continue
+
+                    start_int = int(start_ip)
+                    end_int = int(end_ip)
+                    if end_int < start_int:
+                        start_int, end_int = end_int, start_int
+
+                    range_starts.append(start_int)
+                    ranges.append((start_int, end_int, latitude, longitude, context))
+
+            combined = sorted(zip(range_starts, ranges), key=lambda item: item[0])
+            self._range_starts = [item[0] for item in combined]
+            self._ranges = [item[1] for item in combined]
+            self._database_path = path
+            self._database_mtime = mtime
+            self._cache.clear()
+            logger.info("Loaded %d GeoIP ranges from %s", len(self._ranges), path)
+
+    def _lookup_from_dataset(self, ip: str) -> Optional[LocationPoint]:
+        self._load_database()
+        if not self._ranges:
+            return None
+
+        ip_int = int(ipaddress.ip_address(ip))
+        index = bisect_right(self._range_starts, ip_int) - 1
+        if index < 0:
+            return None
+
+        start_int, end_int, latitude, longitude, context = self._ranges[index]
+        if not (start_int <= ip_int <= end_int):
+            return None
+
+        return LocationPoint(
+            latitude=latitude,
+            longitude=longitude,
+            timestamp=datetime.utcnow(),
+            source="GeoIP (offline)",
+            context=context or f"Offline lookup for {ip}",
+        )
+
     @staticmethod
     def _iter_ips(search_term: str) -> Iterable[str]:
         separators = {",", "\n", "\r", "\t", " "}
@@ -169,13 +270,16 @@ class GeoIPPlugin(BasePlugin):
         except (ValueError, AttributeError):
             return None
 
-    @staticmethod
-    def _derive_location(ip: str, precision: int) -> LocationPoint:
+    def _derive_location(self, ip: str) -> LocationPoint:
+        """Generate deterministic pseudo coordinates for unknown IP addresses."""
+
         address = ipaddress.ip_address(ip)
         integer_value = int(address)
+        precision = int(self.config.get("fallback_precision", 2) or 0)
+        precision = max(0, min(6, precision))
+
         latitude = ((integer_value % 1800000) / 10000.0) - 90.0
         longitude = (((integer_value // 1800000) % 3600000) / 10000.0) - 180.0
-
         latitude = round(latitude, precision)
         longitude = round(longitude, precision)
 
@@ -183,6 +287,9 @@ class GeoIPPlugin(BasePlugin):
             latitude=latitude,
             longitude=longitude,
             timestamp=datetime.utcnow(),
-            source="GeoIP",
-            context=f"Derived location for {ip}",
+            source="GeoIP (derived)",
+            context=f"Derived fallback for {ip}",
         )
+
+
+__all__ = ["GeoIPPlugin"]
