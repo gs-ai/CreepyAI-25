@@ -18,7 +18,7 @@ from typing import Dict, List, Any, Optional, Tuple
 import hashlib
 from dataclasses import dataclass
 
-from app.core.path_utils import get_user_data_dir
+from app.core.path_utils import get_user_data_dir, get_app_root
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +107,38 @@ class BasePlugin:
 
     def get_data_directory(self) -> str:
         """Return the user-managed data directory for this plugin."""
+        # Priority order for resolving where to read plugin input data from:
+        # 1. If the environment variable CREEPYAI_CENTRAL_IMPORT_DIR is set and contains
+        #    plugin-specific files/subdirectory, use that (useful for a single drop folder).
+        # 2. If a repository-local data/imports directory exists (useful during development),
+        #    prefer plugin subfolder there.
+        # 3. Use configured data_directory (plugin config) or the per-plugin default in
+        #    the user's application data imports directory.
+
+        # 1) Check environment override for a central imports directory
+        central_env = os.environ.get("CREEPYAI_CENTRAL_IMPORT_DIR")
+        if central_env:
+            central_path = Path(central_env).expanduser()
+            if central_path.exists():
+                # Prefer a plugin-named subdirectory if present
+                candidate = central_path / self._default_input_dir.name
+                if candidate.exists():
+                    return str(candidate)
+                return str(central_path)
+
+        # 2) Check for a repository-local development imports folder: <repo-root>/data/imports
+        try:
+            repo_imports = get_app_root() / "data" / "imports"
+            if repo_imports.exists():
+                candidate = repo_imports / self._default_input_dir.name
+                if candidate.exists():
+                    return str(candidate)
+                # if repo_imports contains any files at all, prefer it as a central drop location
+                if any(repo_imports.iterdir()):
+                    return str(repo_imports)
+        except Exception:
+            # If get_app_root() fails for any reason, fall back to configured/default path below
+            pass
 
         configured = self.config.get("data_directory")
         if not configured:

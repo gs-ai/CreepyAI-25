@@ -1,5 +1,7 @@
 # CreepyAI-25 – OSINT Intelligence Platform
 
+![CreepyAI Logo](./creepyai25-logo1.1.png)
+
 CreepyAI-25 is an open-source geolocation intelligence assistant that ingests, normalises, and correlates
 offline-first datasets to help investigators surface actionable insights without relying on API keys or
 account credentials.
