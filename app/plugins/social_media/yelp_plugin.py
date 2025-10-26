@@ -414,3 +414,124 @@ class YelpPlugin(ArchiveSocialMediaPlugin):
         except Exception as e:
             print(f"Error extracting business location: {e}")
         return None
+
+    # ------------------------------------------------------------------
+    # Target search support
+    # ------------------------------------------------------------------
+    def search_for_targets(self, search_term: str) -> List[Dict[str, Any]]:
+        """Return candidate business targets whose names match the search term.
+
+        This scans common Yelp export formats (JSON arrays/objects, NDJSON line
+        files, CSV, and simple HTML) within the prepared archive directory.
+        """
+        term = (search_term or "").strip()
+        if not term:
+            return []
+
+        archive_root = self.resolve_archive_root()
+        if archive_root is None:
+            return []
+
+        results: Dict[str, Dict[str, Any]] = {}
+
+        # JSON / NDJSON scan
+        json_patterns = ["**/*.json", "**/*.ndjson"]
+        for path in self.iter_data_files(archive_root, json_patterns):
+            try:
+                with path.open("r", encoding="utf-8", errors="ignore") as f:
+                    first_char = f.read(1)
+                    f.seek(0)
+                    if first_char == "[":
+                        # JSON array
+                        try:
+                            data = json.load(f)
+                            items = data if isinstance(data, list) else []
+                        except Exception:
+                            items = []
+                        for item in items:
+                            if not isinstance(item, dict):
+                                continue
+                            business = item.get("business") if isinstance(item.get("business"), dict) else item
+                            name = None
+                            if isinstance(business, dict):
+                                name = business.get("name")
+                            if name and term.lower() in str(name).lower():
+                                results.setdefault(str(name), {
+                                    "targetId": str(name),
+                                    "targetName": str(name),
+                                    "pluginName": self.name,
+                                })
+                    else:
+                        # NDJSON or object-per-line
+                        for line in f:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            try:
+                                obj = json.loads(line)
+                            except Exception:
+                                continue
+                            business = obj.get("business") if isinstance(obj.get("business"), dict) else obj
+                            name = None
+                            if isinstance(business, dict):
+                                name = business.get("name")
+                            if name and term.lower() in str(name).lower():
+                                results.setdefault(str(name), {
+                                    "targetId": str(name),
+                                    "targetName": str(name),
+                                    "pluginName": self.name,
+                                })
+            except Exception:
+                continue
+
+        # CSV scan (look for name-like columns)
+        for path in self.iter_data_files(archive_root, ["**/*.csv"]):
+            try:
+                with path.open("r", encoding="utf-8", errors="ignore") as f:
+                    reader = csv.reader(f)
+                    headers = next(reader, [])
+                    name_idx = None
+                    for i, h in enumerate(headers):
+                        hl = (h or "").lower()
+                        if any(k in hl for k in ["business", "name", "restaurant", "store"]):
+                            name_idx = i
+                            break
+                    if name_idx is None:
+                        continue
+                    for row in reader:
+                        if len(row) <= name_idx:
+                            continue
+                        name = row[name_idx]
+                        if name and term.lower() in str(name).lower():
+                            results.setdefault(str(name), {
+                                "targetId": str(name),
+                                "targetName": str(name),
+                                "pluginName": self.name,
+                            })
+            except Exception:
+                continue
+
+        # HTML scan (very simple – look for anchor text around business-name classes)
+        for path in self.iter_data_files(archive_root, ["**/*.html", "**/*.htm"]):
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                # naive tag strip for matching
+                plain = re.sub(r"<[^>]+>", " ", text)
+                # split by common separators to find candidate names
+                for token in re.split(r"[\n\r\t,;|]", plain):
+                    token_clean = token.strip()
+                    if not token_clean:
+                        continue
+                    if term.lower() in token_clean.lower() and 2 < len(token_clean) < 120:
+                        results.setdefault(token_clean, {
+                            "targetId": token_clean,
+                            "targetName": token_clean,
+                            "pluginName": self.name,
+                        })
+            except Exception:
+                continue
+
+        # Return a stable, de-duplicated list (cap to reasonable size)
+        out = list(results.values())
+        out.sort(key=lambda x: x["targetName"].lower())
+        return out[:200]
