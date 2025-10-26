@@ -54,6 +54,29 @@ from ui.creepy_map_view import CreepyMapView
 
 logger = logging.getLogger(__name__)
 
+_ICON_STYLESHEET: Optional[str] = None
+
+
+def _load_icon_stylesheet() -> Optional[str]:
+    """Load the shared icon stylesheet once and cache it for reuse."""
+
+    global _ICON_STYLESHEET
+
+    if _ICON_STYLESHEET is not None:
+        return _ICON_STYLESHEET
+
+    style_path = Path(__file__).resolve().parents[2] / "resources" / "styles" / "icons.css"
+    try:
+        _ICON_STYLESHEET = style_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        logger.debug("Icon stylesheet not found at %s", style_path)
+        _ICON_STYLESHEET = None
+    except Exception:
+        logger.exception("Failed to load icon stylesheet from %s", style_path)
+        _ICON_STYLESHEET = None
+
+    return _ICON_STYLESHEET
+
 class CreepyMainWindow(QMainWindow):
     """Main window for the CreepyAI application."""
 
