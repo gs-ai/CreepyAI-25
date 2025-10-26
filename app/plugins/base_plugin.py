@@ -119,11 +119,18 @@ class BasePlugin:
         central_env = os.environ.get("CREEPYAI_CENTRAL_IMPORT_DIR")
         if central_env:
             central_path = Path(central_env).expanduser()
-            if central_path.exists():
-                # Prefer a plugin-named subdirectory if present
-                candidate = central_path / self._default_input_dir.name
-                if candidate.exists():
-                    return str(candidate)
+            try:
+                central_path.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                pass
+
+            # Ensure a plugin-named subfolder exists to avoid confusion in UIs
+            candidate = central_path / self._default_input_dir.name
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+                return str(candidate)
+            except Exception:
+                # Fall back to central root if subfolder cannot be created
                 return str(central_path)
 
         # 2) Check for a repository-local development imports folder: <repo-root>/data/imports
@@ -131,11 +138,16 @@ class BasePlugin:
             repo_imports = get_app_root() / "data" / "imports"
             if repo_imports.exists():
                 candidate = repo_imports / self._default_input_dir.name
-                if candidate.exists():
+                try:
+                    candidate.mkdir(parents=True, exist_ok=True)
                     return str(candidate)
-                # if repo_imports contains any files at all, prefer it as a central drop location
-                if any(repo_imports.iterdir()):
-                    return str(repo_imports)
+                except Exception:
+                    # As a last resort, return repo_imports itself if it is non-empty
+                    try:
+                        if any(repo_imports.iterdir()):
+                            return str(repo_imports)
+                    except Exception:
+                        pass
         except Exception:
             # If get_app_root() fails for any reason, fall back to configured/default path below
             pass
