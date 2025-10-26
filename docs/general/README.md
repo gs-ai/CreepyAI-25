@@ -22,14 +22,10 @@ CreepyAI is an open-source OSINT (Open Source Intelligence) assistant designed t
 
 2. **Manual installation**:
    ```bash
-   # With Conda
-   conda env create -f environment.yml
-   conda activate creepyai
-   
-   # OR with virtualenv
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   # Conda setup
+   conda create -n creapyai python=3.11.14
+   conda activate creapyai
+   python -m pip install -r requirements.txt
    ```
 
 ### Running the Application
