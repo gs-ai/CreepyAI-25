@@ -9,7 +9,7 @@ from typing import Dict, Any, Callable, Optional, List
 
 from PyQt5.QtWidgets import (
     QMainWindow, QToolBar, QAction, QWidget, QMenu,
-    QToolButton, QActionGroup, QApplication
+    QToolButton, QActionGroup, QApplication, QStyle
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon, QKeySequence

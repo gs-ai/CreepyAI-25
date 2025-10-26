@@ -10,10 +10,10 @@ pyyaml==6.0.2
 python-dateutil==2.9.0.post0
 PyQt5==5.15.11
 PyQtWebEngine==5.15.7
-requests==2.32.3
+requests==2.32.4
 
 # API & streaming ingestion
-aiohttp==3.9.5
+aiohttp==3.12.14
 confluent-kafka==2.3.0
 fastapi==0.111.0
 neo4j==5.20.0
@@ -28,18 +28,18 @@ networkx==3.3
 numpy==1.26.4
 pandas==2.2.2
 pyarrow==16.1.0
-scikit-learn==1.4.2
+scikit-learn==1.5.0
 
 # Geocoding & enrichment
 googlemaps==4.10.0
 
 # Observability & security
-cryptography==42.0.8
+cryptography==44.0.1
 python-json-logger==2.0.7
 structlog==24.1.0
 
 # Tooling & packaging
-configobj==5.0.8
+configobj==5.0.9
 python-dotenv==1.0.1
 PyInstaller==6.6.0; python_version >= '3.8'
 tqdm==4.66.4

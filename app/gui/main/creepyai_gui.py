@@ -22,6 +22,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QSettings, QTimer
 from PyQt5.QtGui import QIcon
 
 # Import internal modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from app.analysis import (
     DEFAULT_PROMPT_TEMPLATE,
     LocalLLMAnalyzer,
@@ -79,21 +80,8 @@ def _load_icon_stylesheet() -> Optional[str]:
 class CreepyMainWindow(QMainWindow):
     """Main window for the CreepyAI application."""
 
-    def __init__(
-        self,
-        config_manager=None,
-        parent=None,
-        load_plugins: bool = True,
-        engine=None,
-    ):
+    def __init__(self, config_manager=None, parent=None, load_plugins: bool = True):
         super().__init__(parent)
-
-        self.engine = engine
-
-        if config_manager is None and engine is not None:
-            config_manager = getattr(engine, "config_manager", None)
-            if config_manager is None:
-                config_manager = getattr(engine, "settings_manager", None)
 
         if config_manager is None:
             config_manager = ConfigManager()
@@ -173,8 +161,14 @@ class CreepyMainWindow(QMainWindow):
 
     def _apply_icon_styles(self) -> None:
         """Apply the shared icon stylesheet if it exists."""
-        stylesheet = _load_icon_stylesheet()
-        if stylesheet:
+        style_path = Path(__file__).resolve().parents[2] / "resources" / "styles" / "icons.css"
+        try:
+            stylesheet = style_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            logger.debug("Icon stylesheet not found at %s", style_path)
+        except Exception:
+            logger.exception("Failed to load icon stylesheet from %s", style_path)
+        else:
             self.setStyleSheet(stylesheet)
     
     def _create_toolbars(self):
@@ -998,6 +992,24 @@ class CreepyMainWindow(QMainWindow):
 
 
 
+class CreepyAIGUI(CreepyMainWindow):
+    """Compatibility wrapper exposing the legacy CreepyAI GUI class name."""
+
+    def __init__(
+        self,
+        engine=None,
+        config_manager=None,
+        parent=None,
+        load_plugins: bool = True,
+    ):
+        self.engine = engine
+        if config_manager is None and engine is not None:
+            config_manager = getattr(engine, "config_manager", None)
+            if config_manager is None:
+                config_manager = getattr(engine, "settings_manager", None)
+        super().__init__(config_manager=config_manager, parent=parent, load_plugins=load_plugins)
+
+
 def launch_gui(
     config_path: Optional[str] = None,
     app_root: Optional[str] = None,
@@ -1019,15 +1031,10 @@ def launch_gui(
     if qt_app is None:
         qt_app = QApplication(sys.argv)
 
-    window = CreepyMainWindow(
-        config_manager=config_manager,
-        load_plugins=load_plugins,
-    )
+    window = CreepyMainWindow(config_manager=config_manager, load_plugins=load_plugins)
     window.show()
 
     return qt_app.exec_()
 
-
-CreepyAIGUI = CreepyMainWindow
 
 __all__ = ["CreepyMainWindow", "CreepyAIGUI", "launch_gui"]

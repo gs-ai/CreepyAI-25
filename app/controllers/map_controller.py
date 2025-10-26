@@ -11,12 +11,13 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from PyQt5.QtCore import QObject, pyqtSignal, QUrl, QVariant, QJsonValue, QJsonDocument
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QUrl, QVariant, QJsonValue, QJsonDocument
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebChannel import QWebChannel
 
 from app.models.location_data import LocationDataModel, Location
+from app.plugins.geocoding_helper import GeocodingHelper
 from app.core.path_utils import get_resource_path
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ class MapController(QObject):
     clusterSelected = pyqtSignal(list)  # Emits list of location IDs when a cluster is selected
     mapMoved = pyqtSignal(float, float, float)  # Emits lat, lng, zoom when map is moved
     mapError = pyqtSignal(str)  # Emits error message when map encounters an error
+    # Additional signals expected by UI
+    markersUpdated = pyqtSignal(int)  # Emits count of markers after updates
+    mapLayerChanged = pyqtSignal(str)  # Emits name of the current map layer
     
     def __init__(self, web_view: QWebEngineView):
         """
@@ -46,12 +50,15 @@ class MapController(QObject):
         self.web_view = web_view
         self.location_model = None
         self.markers = {}  # Dictionary of marker IDs to location IDs
+        self.marker_details: List[Dict[str, Any]] = []  # Details for export (lat/lng/title,...)
         self.selected_marker_id = None
         self.marker_counter = 0
         self.web_channel = QWebChannel()
         
         # Set up web channel
-        self.web_view.page().setWebChannel(self.web_channel)
+        page_obj = self.web_view.page()
+        if page_obj is not None:  # Guard for type checker
+            page_obj.setWebChannel(self.web_channel)
         self.web_channel.registerObject("mapController", self)
         
         # Set up map
@@ -60,10 +67,40 @@ class MapController(QObject):
         # Flag to track if map is ready
         self.map_ready = False
         
-        # Default view settings
-        self.default_lat = 0
-        self.default_lng = 0
+        # Default view settings (USA center)
+        self.default_lat = 39.8283
+        self.default_lng = -98.5795
         self.default_zoom = 4
+
+        # Layer and visibility state
+        self._available_layers = [
+            "Street Map", "Satellite", "Terrain", "Dark Mode"
+        ]
+        self._current_layer = "Dark Mode"
+        self._visible_plugins = {}
+        self._date_from = None
+        self._date_to = None
+        # Geocoding helper for text -> coordinates search
+        self._geocoder = GeocodingHelper()
+
+    # ---- Methods expected by UI (minimal implementations) ----
+    def update_visible_plugins(self, plugin_name: str, visible: bool) -> None:
+        """Track visibility of plugins and refresh markers if needed."""
+        try:
+            self._visible_plugins[plugin_name] = visible
+            logger.info(f"Plugin visibility changed: {plugin_name} => {visible}")
+            # In a full implementation, we'd filter displayed markers by source/plugin here
+            self._emit_markers_updated()
+        except Exception as e:
+            logger.warning(f"update_visible_plugins error: {e}")
+
+    def get_available_layers(self) -> List[str]:
+        """Return list of available base layers."""
+        return list(self._available_layers)
+
+    def get_current_layer(self) -> str:
+        """Return current base layer name."""
+        return self._current_layer
     
     def setup_map(self) -> None:
         """Set up the map view"""
@@ -84,7 +121,10 @@ class MapController(QObject):
             
             # Connect JavaScript callbacks
             page = self.web_view.page()
-            page.javaScriptConsoleMessage = self._handle_js_console
+            try:
+                page.javaScriptConsoleMessage = self._handle_js_console  # type: ignore[attr-defined]
+            except Exception:
+                pass
             
             logger.info("Map setup complete")
             
@@ -156,7 +196,9 @@ class MapController(QObject):
         window.creepyAI.mapReady = true;
         """
         
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def set_location_model(self, model: LocationDataModel) -> None:
         """
@@ -241,7 +283,14 @@ class MapController(QObject):
             window.creepyAI.addMarker({json.dumps(marker_options)});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
+        # Track details for export
+        try:
+            self.marker_details.append(marker_options)
+        except Exception:
+            pass
     
     def remove_location_marker(self, location_id: str) -> None:
         """
@@ -268,7 +317,9 @@ class MapController(QObject):
                 window.creepyAI.removeMarker("{marker_id}");
             }}
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
             
             # Remove from our markers dictionary
             del self.markers[marker_id]
@@ -307,7 +358,9 @@ class MapController(QObject):
                 window.creepyAI.updateMarker({json.dumps(marker_options)});
             }}
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
     
     def clear_markers(self) -> None:
         """Clear all markers from the map"""
@@ -320,10 +373,13 @@ class MapController(QObject):
             window.creepyAI.clearMarkers();
         }
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
         
         # Clear our markers dictionary
         self.markers = {}
+        self.marker_details = []
         self.marker_counter = 0
     
     def set_view(self, lat: float, lng: float, zoom: int = 14) -> None:
@@ -344,7 +400,9 @@ class MapController(QObject):
             window.creepyAI.setView({lat}, {lng}, {zoom});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def fit_bounds(self) -> None:
         """Fit the map to show all markers"""
@@ -357,7 +415,9 @@ class MapController(QObject):
             window.creepyAI.fitBounds();
         }
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def select_marker(self, location_id: str) -> None:
         """
@@ -384,7 +444,9 @@ class MapController(QObject):
                 window.creepyAI.selectMarker("{marker_id}");
             }}
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
             
             # Store selected marker ID
             self.selected_marker_id = marker_id
@@ -400,7 +462,9 @@ class MapController(QObject):
             window.creepyAI.deselectMarker();
         }
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
         
         # Clear selected marker ID
         self.selected_marker_id = None
@@ -412,6 +476,9 @@ class MapController(QObject):
         Args:
             layer_name: Name of the layer to set
         """
+        if layer_name in self._available_layers:
+            self._current_layer = layer_name
+            self.mapLayerChanged.emit(layer_name)
         if not self.map_ready:
             return
         
@@ -421,7 +488,9 @@ class MapController(QObject):
             window.creepyAI.setMapLayer("{layer_name}");
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def toggle_heatmap(self, enabled: bool) -> None:
         """
@@ -439,7 +508,9 @@ class MapController(QObject):
             window.creepyAI.toggleHeatmap({str(enabled).lower()});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def toggle_clustering(self, enabled: bool) -> None:
         """
@@ -457,7 +528,9 @@ class MapController(QObject):
             window.creepyAI.toggleClustering({str(enabled).lower()});
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
     
     def show_path(self, show: bool = True, 
                  location_ids: Optional[List[str]] = None,
@@ -481,18 +554,20 @@ class MapController(QObject):
                 window.creepyAI.hidePath();
             }
             """
-            self.web_view.page().runJavaScript(js_code)
+            page = self.web_view.page()
+            if page:
+                page.runJavaScript(js_code)
             return
         
         # Get locations to include in path
         locations = []
         if location_ids:
             for location_id in location_ids:
-                location = self.location_model.get_location(location_id)
+                location = self.location_model.get_location(location_id) if self.location_model else None
                 if location:
                     locations.append(location)
         else:
-            locations = self.location_model.get_all_locations()
+            locations = self.location_model.get_all_locations() if self.location_model else []
         
         # Sort locations by timestamp (if available)
         locations = sorted(
@@ -516,7 +591,90 @@ class MapController(QObject):
             window.creepyAI.showPath({json.dumps(path_data)}, "{color}");
         }}
         """
-        self.web_view.page().runJavaScript(js_code)
+        page = self.web_view.page()
+        if page:
+            page.runJavaScript(js_code)
+
+    def update_map_markers(self) -> None:
+        """Placeholder: refresh marker display based on model and filters."""
+        try:
+            if not self.map_ready:
+                return
+            # For now, simply re-display all markers if a model exists
+            if self.location_model:
+                self.display_all_locations()
+            self._emit_markers_updated()
+        except Exception as e:
+            logger.warning(f"update_map_markers error: {e}")
+
+    def get_keyboard_shortcuts_help(self) -> Dict[str, str]:
+        """Provide basic keyboard shortcuts description for UI hints."""
+        return {
+            "Ctrl+1": "Switch to Street Map layer",
+            "Ctrl+2": "Switch to Satellite layer",
+            "Ctrl+3": "Switch to Terrain layer",
+            "Ctrl+4": "Switch to Dark Mode layer",
+        }
+
+    def show_map_tooltip(self, message: str) -> None:
+        """Optional: display a tooltip on the map (no-op placeholder)."""
+        logger.debug(f"Map tooltip: {message}")
+
+    def clear_search(self) -> None:
+        """Clear any active search filters (placeholder)."""
+        # In a full implementation we'd clear search-specific filters/state.
+        self.update_map_markers()
+
+    def search_map(self, term: str) -> int:
+        """Geocode a text query and add a marker to the map; center view if found."""
+        try:
+            if not term or not isinstance(term, str):
+                return 0
+            lat, lon = self._geocoder.geocode(term)
+            if lat is None or lon is None:
+                logger.info(f"No geocoding result for term: {term}")
+                return 0
+            # Create a temporary Location and add marker
+            location = Location(latitude=lat, longitude=lon, source="Search", context=term)
+            # Ensure map is ready before adding
+            if self.map_ready:
+                self.add_location_marker(location)
+                # Center the map on the result with a reasonable zoom
+                self.set_view(lat, lon, zoom=12)
+                self._emit_markers_updated()
+                return 1
+            else:
+                # Queue behavior could be added; for now, just set view when ready.
+                logger.warning("Map not ready yet when search_map was called")
+                return 0
+        except Exception as e:
+            logger.warning(f"search_map error: {e}")
+            return 0
+
+    def search_for_targets(self, term: str) -> List[Dict[str, Any]]:
+        """Placeholder target search. Returns an empty list."""
+        logger.info(f"search_for_targets called with term: {term}")
+        return []
+
+    def set_date_range(self, from_datetime: Optional[datetime], to_datetime: Optional[datetime]) -> None:
+        """Store a date range for filtering (placeholder)."""
+        self._date_from = from_datetime
+        self._date_to = to_datetime
+        logger.info(f"Date range set: {self._date_from} to {self._date_to}")
+        self.update_map_markers()
+
+    def apply_settings(self) -> None:
+        """Apply map-related settings (placeholder)."""
+        logger.debug("apply_settings called")
+        self.update_map_markers()
+
+    def _emit_markers_updated(self) -> None:
+        """Emit markersUpdated with current marker count."""
+        try:
+            count = len(self.markers) if isinstance(self.markers, dict) else 0
+            self.markersUpdated.emit(count)
+        except Exception:
+            pass
     
     # JavaScript callable slots
     

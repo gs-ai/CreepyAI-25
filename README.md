@@ -23,11 +23,11 @@ account credentials.
 
 ### Installation
 
-1. **Create and activate the Conda environment**
+1. **Create an environment**
    ```bash
-   conda create -n creapyai python=3.11.14
-   conda activate creapyai
-   python -m pip install -r requirements.txt
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
    ```
 
 2. **Launch the desktop app**
