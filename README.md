@@ -59,13 +59,14 @@ them consistently.
 ### 1. Create a Python Environment
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+conda env create -f environments/conda-env.yaml
+conda activate creepyai
 ```
 
-Python 3.9+ is required. Use `pyenv` or your system package manager to
-install a compatible interpreter if necessary.
+The bundled `conda-env.yaml` provisions Python 3.11, Node.js, and the
+project dependencies in a managed Conda environment named `creepyai`.
+If the environment already exists, run `conda activate creepyai &&
+conda env update -f environments/conda-env.yaml` to refresh it.
 
 ### 2. Launch the Desktop App
 
