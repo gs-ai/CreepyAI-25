@@ -1,0 +1,266 @@
+{
+  "facebook": [
+    {
+      "source_id": "meta_mpk_one",
+      "name": "Meta Headquarters",
+      "display_name": "Meta Headquarters, 1 Hacker Way, Menlo Park, California, USA",
+      "latitude": 37.4848,
+      "longitude": -122.1484,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/Meta_Platforms",
+      "terms": [
+        "Facebook headquarters",
+        "Meta headquarters",
+        "Meta menlo park",
+        "Meta Platforms office",
+        "Facebook data center"
+      ]
+    },
+    {
+      "source_id": "meta_mpk_21",
+      "name": "Meta MPK 21",
+      "display_name": "Meta MPK 21, 1 Hacker Way, Menlo Park, California, USA",
+      "latitude": 37.4852,
+      "longitude": -122.1477,
+      "category": "campus",
+      "source": "https://en.wikipedia.org/wiki/Meta_Platforms",
+      "terms": [
+        "Facebook campus",
+        "Meta MPK",
+        "Menlo Park campus"
+      ]
+    },
+    {
+      "source_id": "meta_seattle",
+      "name": "Meta Seattle",
+      "display_name": "Meta Seattle, 1101 Westlake Ave N, Seattle, Washington, USA",
+      "latitude": 47.6205,
+      "longitude": -122.3493,
+      "category": "regional_office",
+      "source": "https://about.fb.com/company-info/",
+      "terms": [
+        "Facebook office Seattle",
+        "Meta Seattle",
+        "Meta regional office"
+      ]
+    }
+  ],
+  "instagram": [
+    {
+      "source_id": "instagram_mpk",
+      "name": "Instagram HQ",
+      "display_name": "Instagram Headquarters, 1601 Willow Road, Menlo Park, California, USA",
+      "latitude": 37.4841,
+      "longitude": -122.1500,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/Instagram",
+      "terms": [
+        "Instagram office",
+        "Instagram headquarters",
+        "Instagram menlo park",
+        "Meta office Los Angeles"
+      ]
+    },
+    {
+      "source_id": "instagram_newyork",
+      "name": "Instagram New York",
+      "display_name": "Instagram New York, 770 Broadway, New York, New York, USA",
+      "latitude": 40.7304,
+      "longitude": -73.9910,
+      "category": "regional_office",
+      "source": "https://www.instagram.com/about-us/",
+      "terms": [
+        "Instagram office New York",
+        "Instagram NYC",
+        "Instagram east coast"
+      ]
+    }
+  ],
+  "linkedin": [
+    {
+      "source_id": "linkedin_sunnyvale",
+      "name": "LinkedIn Headquarters",
+      "display_name": "LinkedIn Headquarters, 1000 W Maude Ave, Sunnyvale, California, USA",
+      "latitude": 37.3908,
+      "longitude": -122.0307,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/LinkedIn",
+      "terms": [
+        "LinkedIn headquarters",
+        "LinkedIn Sunnyvale",
+        "LinkedIn office"
+      ]
+    },
+    {
+      "source_id": "linkedin_omaha",
+      "name": "LinkedIn Omaha",
+      "display_name": "LinkedIn Omaha, 1818 N 90th St, Omaha, Nebraska, USA",
+      "latitude": 41.2757,
+      "longitude": -96.0544,
+      "category": "operations_center",
+      "source": "https://blog.linkedin.com/",
+      "terms": [
+        "LinkedIn Omaha",
+        "LinkedIn operations",
+        "LinkedIn regional office"
+      ]
+    }
+  ],
+  "pinterest": [
+    {
+      "source_id": "pinterest_sf",
+      "name": "Pinterest Headquarters",
+      "display_name": "Pinterest Headquarters, 651 Brannan St, San Francisco, California, USA",
+      "latitude": 37.7749,
+      "longitude": -122.3975,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/Pinterest",
+      "terms": [
+        "Pinterest headquarters",
+        "Pinterest San Francisco",
+        "Pinterest office",
+        "Pinterest data center"
+      ]
+    },
+    {
+      "source_id": "pinterest_seattle",
+      "name": "Pinterest Seattle",
+      "display_name": "Pinterest Seattle, 505 1st Ave S, Seattle, Washington, USA",
+      "latitude": 47.5989,
+      "longitude": -122.3345,
+      "category": "regional_office",
+      "source": "https://newsroom.pinterest.com/",
+      "terms": [
+        "Pinterest Seattle",
+        "Pinterest Pacific Northwest",
+        "Pinterest tech center"
+      ]
+    }
+  ],
+  "snapchat": [
+    {
+      "source_id": "snapchat_santamonica",
+      "name": "Snap Inc. Headquarters",
+      "display_name": "Snap Inc. Headquarters, 2772 Donald Douglas Loop N, Santa Monica, California, USA",
+      "latitude": 34.0141,
+      "longitude": -118.4502,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/Snap_Inc.",
+      "terms": [
+        "Snapchat headquarters",
+        "Snap Inc headquarters",
+        "Snapchat Santa Monica",
+        "Snap Inc office"
+      ]
+    },
+    {
+      "source_id": "snapchat_losangeles",
+      "name": "Snap Inc. Los Angeles",
+      "display_name": "Snap Inc. Los Angeles, 963 E 4th St, Los Angeles, California, USA",
+      "latitude": 34.0445,
+      "longitude": -118.2366,
+      "category": "studio",
+      "source": "https://newsroom.snap.com/",
+      "terms": [
+        "Snapchat Los Angeles",
+        "Snapchat studio",
+        "Snapchat campus",
+        "Snap Inc LA"
+      ]
+    }
+  ],
+  "tiktok": [
+    {
+      "source_id": "tiktok_losangeles",
+      "name": "TikTok Los Angeles",
+      "display_name": "TikTok Los Angeles, 5800 Bristol Pkwy, Culver City, California, USA",
+      "latitude": 33.9784,
+      "longitude": -118.3931,
+      "category": "corporate_office",
+      "source": "https://newsroom.tiktok.com/",
+      "terms": [
+        "TikTok headquarters",
+        "TikTok Los Angeles",
+        "TikTok office",
+        "ByteDance Culver City"
+      ]
+    },
+    {
+      "source_id": "tiktok_newyork",
+      "name": "TikTok New York",
+      "display_name": "TikTok New York, 151 W 42nd St, New York, New York, USA",
+      "latitude": 40.7550,
+      "longitude": -73.9845,
+      "category": "regional_office",
+      "source": "https://newsroom.tiktok.com/",
+      "terms": [
+        "TikTok New York",
+        "TikTok Times Square",
+        "ByteDance campus",
+        "TikTok east coast"
+      ]
+    }
+  ],
+  "twitter": [
+    {
+      "source_id": "twitter_sf",
+      "name": "X (Twitter) Headquarters",
+      "display_name": "X (Twitter) Headquarters, 1355 Market St, San Francisco, California, USA",
+      "latitude": 37.7765,
+      "longitude": -122.4170,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/Twitter",
+      "terms": [
+        "Twitter headquarters",
+        "X Corp headquarters",
+        "Twitter San Francisco",
+        "Twitter data center"
+      ]
+    },
+    {
+      "source_id": "twitter_boulder",
+      "name": "Twitter Boulder",
+      "display_name": "Twitter Boulder, 3470 Walnut St, Boulder, Colorado, USA",
+      "latitude": 40.0180,
+      "longitude": -105.2471,
+      "category": "engineering_office",
+      "source": "https://blog.twitter.com/",
+      "terms": [
+        "Twitter Boulder",
+        "X Corp office",
+        "Twitter engineering"
+      ]
+    }
+  ],
+  "yelp": [
+    {
+      "source_id": "yelp_sf",
+      "name": "Yelp Headquarters",
+      "display_name": "Yelp Headquarters, 140 New Montgomery St, San Francisco, California, USA",
+      "latitude": 37.7869,
+      "longitude": -122.3997,
+      "category": "corporate_office",
+      "source": "https://en.wikipedia.org/wiki/Yelp",
+      "terms": [
+        "Yelp headquarters",
+        "Yelp San Francisco",
+        "Yelp office",
+        "Yelp campus"
+      ]
+    },
+    {
+      "source_id": "yelp_scottsdale",
+      "name": "Yelp Scottsdale",
+      "display_name": "Yelp Scottsdale, 8355 E Hartford Dr, Scottsdale, Arizona, USA",
+      "latitude": 33.6416,
+      "longitude": -111.9016,
+      "category": "regional_office",
+      "source": "https://blog.yelp.com/",
+      "terms": [
+        "Yelp Scottsdale",
+        "Yelp Arizona",
+        "Yelp support center"
+      ]
+    }
+  ]
+}
