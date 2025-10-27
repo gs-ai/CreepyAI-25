@@ -12,11 +12,13 @@ from typing import Callable, Dict, Iterable, List, Mapping, MutableMapping, Opti
 import requests
 
 from app.plugins.social_media import SOCIAL_MEDIA_PLUGINS
+from .repositories import DataRepository, StaticJSONRepository
 
 logger = logging.getLogger(__name__)
 
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+DEFAULT_DATASET = Path(__file__).resolve().parent / "datasets" / "social_media_locations.json"
 
 
 @dataclass
@@ -55,6 +57,7 @@ class SocialMediaDataCollector:
         *,
         session: Optional[requests.Session] = None,
         fetcher: Optional[Callable[[str], Sequence[Mapping[str, object]]]] = None,
+        repositories: Optional[Sequence[DataRepository]] = None,
     ) -> None:
         self.session = session or requests.Session()
         self.session.headers.setdefault(
@@ -62,6 +65,7 @@ class SocialMediaDataCollector:
             "CreepyAI-SocialMediaCollector/1.0 (+https://github.com/creepyai)",
         )
         self._fetcher = fetcher or self._fetch_from_nominatim
+        self._repositories = list(repositories) if repositories is not None else self._build_default_repositories()
 
     # ------------------------------------------------------------------
     # Public API
@@ -95,13 +99,36 @@ class SocialMediaDataCollector:
             }
 
             for term in search_terms:
-                try:
-                    raw_results = self._fetcher(term)
-                except Exception as exc:  # pragma: no cover - defensive logging
-                    logger.warning("Failed to fetch results for %s (%s): %s", slug, term, exc)
-                    continue
+                aggregated_results: List[Mapping[str, object]] = []
 
-                for raw in raw_results:
+                for repository in self._repositories:
+                    try:
+                        repo_results = repository.search(slug, term)
+                    except Exception as exc:  # pragma: no cover - repository errors
+                        logger.debug(
+                            "Repository %s failed for %s (%s): %s",
+                            repository,
+                            slug,
+                            term,
+                            exc,
+                        )
+                        continue
+
+                    if repo_results:
+                        aggregated_results.extend(repo_results)
+
+                if not aggregated_results:
+                    try:
+                        fetched = self._fetcher(term)
+                    except Exception as exc:  # pragma: no cover - defensive logging
+                        logger.warning(
+                            "Failed to fetch results for %s (%s): %s", slug, term, exc
+                        )
+                        continue
+
+                    aggregated_results.extend(fetched)
+
+                for raw in aggregated_results:
                     record = self._convert_raw_record(
                         raw, plugin.data_source_url or plugin.name, timestamp
                     )
@@ -138,6 +165,14 @@ class SocialMediaDataCollector:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+    def _build_default_repositories(self) -> List[DataRepository]:
+        repositories: List[DataRepository] = []
+        if DEFAULT_DATASET.exists():
+            repositories.append(StaticJSONRepository(DEFAULT_DATASET))
+        else:  # pragma: no cover - optional dataset
+            logger.debug("No default social media dataset found at %s", DEFAULT_DATASET)
+        return repositories
+
     def _fetch_from_nominatim(self, query: str) -> Sequence[Mapping[str, object]]:
         logger.debug("Fetching Nominatim results for %s", query)
         response = self.session.get(
@@ -210,13 +245,21 @@ class SocialMediaDataCollector:
 
         osm_type = str(raw.get("osm_type") or "")
         osm_id = raw.get("osm_id")
-        if osm_type and osm_id is not None:
+
+        raw_source_id = raw.get("source_id")
+        if isinstance(raw_source_id, str) and raw_source_id:
+            source_id = raw_source_id
+        elif osm_type and osm_id is not None:
             source_id = f"{osm_type}:{osm_id}"
         else:
             source_id = f"{source}:{latitude:.6f},{longitude:.6f}"
 
+        if isinstance(raw.get("source"), str) and raw.get("source"):
+            source = str(raw["source"])
+
         name = str(raw.get("name") or raw.get("display_name") or source)
-        category = str(raw.get("type") or raw.get("category") or "") or None
+        category_value = raw.get("type") or raw.get("category")
+        category = str(category_value) if category_value else None
         display_name = str(raw.get("display_name") or "") or None
 
         return CollectionResult(
