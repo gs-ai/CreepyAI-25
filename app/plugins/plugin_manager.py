@@ -1,11 +1,4 @@
-"""Plugin management utilities for CreepyAI.
-
-This module encapsulates plugin discovery, instantiation and execution.
-Plugins are loaded from the configured directory at runtime. Errors
-encountered while loading or instantiating plugins are captured and
-logged. A manifest of loaded plugins and any failures is exposed via
-``get_manifest`` and ``get_failed_plugins``.
-"""
+"""Plugin management utilities for CreepyAI."""
 
 from __future__ import annotations
 
@@ -15,21 +8,13 @@ from typing import Any, Dict, Iterable, Optional
 
 from app.plugins.catalog import PluginCatalog
 
-
 logger = logging.getLogger("creepyai.plugin_manager")
 
 
 class PluginManager:
-    """Light‑weight loader and registry of CreepyAI plugins.
+    """Light-weight loader and registry of CreepyAI plugins."""
 
-    The manager maintains a mapping of plugin identifiers to plugin
-    instances, along with human‑friendly aliases derived from their
-    declared names. It exposes methods to enumerate failures, fetch
-    individual plugins by identifier or alias and execute their run
-    methods.
-    """
-
-    def __init__(self, plugin_dir: str | None = None) -> None:
+    def __init__(self, plugin_dir: str | Path | None = None) -> None:
         directory = Path(plugin_dir) if plugin_dir else Path(__file__).resolve().parent
         self.plugin_dir: Path = directory
         self.plugin_dir.mkdir(parents=True, exist_ok=True)
@@ -42,18 +27,8 @@ class PluginManager:
     # Lifecycle
     # ------------------------------------------------------------------
     def initialize(self, *, force_refresh: bool = False) -> Dict[str, Any]:
-        """Prepare the internal data structures and optionally reload plugins.
+        """Prepare the internal data structures and optionally reload plugins."""
 
-        Parameters
-        ----------
-        force_refresh : bool
-            When true, forces a reload of plugins on initialisation.
-
-        Returns
-        -------
-        dict
-            A mapping of plugin identifiers to instantiated plugin objects.
-        """
         self.plugins.clear()
         self.failed_plugins.clear()
         self._aliases.clear()
@@ -62,19 +37,8 @@ class PluginManager:
         return self.plugins
 
     def load_plugins(self, *, force_refresh: bool = False) -> Dict[str, Any]:
-        """Discover and instantiate plugins from the configured directory.
+        """Discover and instantiate plugins from the configured directory."""
 
-        Parameters
-        ----------
-        force_refresh : bool
-            When true, bypasses any cached plugin descriptors and reloads
-            from disk.
-
-        Returns
-        -------
-        dict
-            A mapping of plugin identifiers to plugin instances.
-        """
         self.plugins.clear()
         self.failed_plugins.clear()
         self._aliases.clear()
@@ -88,7 +52,7 @@ class PluginManager:
                 continue
             try:
                 instance = descriptor.instantiate()
-            except Exception as exc:
+            except Exception as exc:  # pragma: no cover - defensive guard
                 message = f"{type(exc).__name__}: {exc}"
                 self.failed_plugins[key] = message
                 logger.error("Failed to instantiate plugin %s: %s", key, message)
@@ -101,16 +65,13 @@ class PluginManager:
     # Registration
     # ------------------------------------------------------------------
     def register_plugins(self, plugin_classes: Iterable[type]) -> Dict[str, Any]:
-        """Register plugins supplied as classes.
+        """Register plugins supplied as classes."""
 
-        This method is primarily for testing or manual injection of plugin
-        implementations without needing a descriptor on disk.
-        """
         for plugin_class in plugin_classes:
             identifier = getattr(plugin_class, "__name__", str(plugin_class))
             try:
                 instance = plugin_class()
-            except Exception as exc:
+            except Exception as exc:  # pragma: no cover - defensive guard
                 message = f"{type(exc).__name__}: {exc}"
                 self.failed_plugins[identifier] = message
                 logger.error("Failed to instantiate plugin %s: %s", identifier, message)
@@ -120,14 +81,16 @@ class PluginManager:
         return self.plugins
 
     # ------------------------------------------------------------------
-    # Query
+    # Query helpers
     # ------------------------------------------------------------------
     def get_failed_plugins(self) -> Dict[str, str]:
         """Return a mapping of plugin identifiers to failure reasons."""
+
         return dict(self.failed_plugins)
 
     def get_manifest(self) -> Dict[str, Dict[str, Any]]:
         """Return a structured manifest describing loaded plugins."""
+
         manifest: Dict[str, Dict[str, Any]] = {}
         for identifier, plugin in self.plugins.items():
             info = getattr(plugin, "get_info", lambda: {"name": identifier})()
@@ -136,6 +99,7 @@ class PluginManager:
 
     def get_plugin(self, name: str) -> Optional[Any]:
         """Retrieve a plugin by identifier or human readable name."""
+
         candidate = self.plugins.get(name)
         if candidate:
             return candidate
@@ -149,11 +113,11 @@ class PluginManager:
     # ------------------------------------------------------------------
     def execute_plugin(self, name: str, *args: Any, **kwargs: Any) -> Any:
         """Execute a plugin by its identifier or alias."""
+
         plugin = self.get_plugin(name)
         if not plugin:
             logger.error("Plugin %s not found", name)
             return None
-        # Prefer `run` method, fall back to `execute` for legacy compatibility
         callable_attr = getattr(plugin, "run", None) or getattr(plugin, "execute", None)
         if not callable(callable_attr):
             logger.error("Plugin %s has no executable interface", name)
@@ -165,10 +129,11 @@ class PluginManager:
             return None
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Internal helpers
     # ------------------------------------------------------------------
     def _register_instance(self, identifier: str, instance: Any, info: Dict[str, Any]) -> None:
         """Add a plugin instance to the registry and record its alias."""
+
         self.plugins[identifier] = instance
         display_name = info.get("name") if isinstance(info, dict) else None
         if isinstance(display_name, str):
